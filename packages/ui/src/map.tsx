@@ -19,7 +19,7 @@ import {
 import { createPortal } from "react-dom";
 import { X, Minus, Plus, Locate, Maximize, Loader2 } from "lucide-react";
 
-import { cn } from "src/lib/utils";
+import { cn } from "@acme/ui";
 
 type MapContextValue = {
   map: MapLibreGL.Map | null;
@@ -1200,6 +1200,9 @@ function MapClusterLayer<
       if (!features.length) return;
 
       const feature = features[0];
+
+      if (!feature?.properties) return;
+
       const clusterId = feature.properties?.cluster_id as number;
       const pointCount = feature.properties?.point_count as number;
       const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [
@@ -1229,6 +1232,9 @@ function MapClusterLayer<
       if (!onPointClick || !e.features?.length) return;
 
       const feature = e.features[0];
+
+      if (!feature?.properties) return;
+
       const coordinates = (
         feature.geometry as GeoJSON.Point
       ).coordinates.slice() as [number, number];
