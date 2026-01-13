@@ -1,20 +1,20 @@
-import { HydrateClient } from "~/trpc/server";
-import { AuthShowcase } from "./_components/auth-showcase";
+import { redirect } from "next/navigation";
 
-export default function AdminHomePage() {
-  return (
-    <HydrateClient>
-      <main className="container h-screen py-16">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-            GSP <span className="text-primary">Admin</span>
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Panel de administración - Gaussian Splatting Platform
-          </p>
-          <AuthShowcase />
-        </div>
-      </main>
-    </HydrateClient>
-  );
+import { getSession } from "~/auth/server";
+
+export default async function AdminHomePage() {
+  const session = await getSession();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  // Check if user has admin role
+  const userRole = session.user.role as string;
+  if (!["admin", "superadmin"].includes(userRole)) {
+    redirect("/login?error=unauthorized");
+  }
+
+  // If authenticated admin, go to dashboard
+  redirect("/dashboard");
 }
