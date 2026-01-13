@@ -1,8 +1,11 @@
 "use client";
 
-import MapLibreGL, { type PopupOptions, type MarkerOptions } from "maplibre-gl";
+import type { MarkerOptions, PopupOptions } from "maplibre-gl";
+import MapLibreGL from "maplibre-gl";
+
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useTheme } from "next-themes";
+
+import type { ReactNode } from "react";
 import {
   createContext,
   forwardRef,
@@ -14,10 +17,10 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
+import { Loader2, Locate, Maximize, Minus, Plus, X } from "lucide-react";
+import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
-import { X, Minus, Plus, Locate, Maximize, Loader2 } from "lucide-react";
 
 import { cn } from "@acme/ui";
 
@@ -59,16 +62,16 @@ type MapRef = MapLibreGL.Map;
 const DefaultLoader = () => (
   <div className="absolute inset-0 flex items-center justify-center">
     <div className="flex gap-1">
-      <span className="size-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
-      <span className="size-1.5 rounded-full bg-muted-foreground/60 animate-pulse [animation-delay:150ms]" />
-      <span className="size-1.5 rounded-full bg-muted-foreground/60 animate-pulse [animation-delay:300ms]" />
+      <span className="bg-muted-foreground/60 size-1.5 animate-pulse rounded-full" />
+      <span className="bg-muted-foreground/60 size-1.5 animate-pulse rounded-full [animation-delay:150ms]" />
+      <span className="bg-muted-foreground/60 size-1.5 animate-pulse rounded-full [animation-delay:300ms]" />
     </div>
   </div>
 );
 
 const Map = forwardRef<MapRef, MapProps>(function Map(
   { children, styles, projection, ...props },
-  ref
+  ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<MapLibreGL.Map | null>(null);
@@ -83,7 +86,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
       dark: styles?.dark ?? defaultStyles.dark,
       light: styles?.light ?? defaultStyles.light,
     }),
-    [styles]
+    [styles],
   );
 
   useImperativeHandle(ref, () => mapInstance as MapLibreGL.Map, [mapInstance]);
@@ -163,12 +166,12 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
       map: mapInstance,
       isLoaded: isLoaded && isStyleLoaded,
     }),
-    [mapInstance, isLoaded, isStyleLoaded]
+    [mapInstance, isLoaded, isStyleLoaded],
   );
 
   return (
     <MapContext.Provider value={contextValue}>
-      <div ref={containerRef} className="relative w-full h-full">
+      <div ref={containerRef} className="relative h-full w-full">
         {isLoading && <DefaultLoader />}
         {/* SSR-safe: children render only when map is loaded on client */}
         {mapInstance && children}
@@ -331,7 +334,7 @@ function MarkerContent({ children, className }: MarkerContentProps) {
     <div className={cn("relative cursor-pointer", className)}>
       {children || <DefaultMarkerIcon />}
     </div>,
-    marker.getElement()
+    marker.getElement(),
   );
 }
 
@@ -403,15 +406,15 @@ function MarkerPopup({
   return createPortal(
     <div
       className={cn(
-        "relative rounded-md border bg-popover p-3 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95",
-        className
+        "bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 relative rounded-md border p-3 shadow-md",
+        className,
       )}
     >
       {closeButton && (
         <button
           type="button"
           onClick={handleClose}
-          className="absolute top-1 right-1 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="ring-offset-background focus:ring-ring absolute top-1 right-1 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none"
           aria-label="Close popup"
         >
           <X className="h-4 w-4" />
@@ -420,7 +423,7 @@ function MarkerPopup({
       )}
       {children}
     </div>,
-    container
+    container,
   );
 }
 
@@ -489,13 +492,13 @@ function MarkerTooltip({
   return createPortal(
     <div
       className={cn(
-        "rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md animate-in fade-in-0 zoom-in-95",
-        className
+        "bg-foreground text-background animate-in fade-in-0 zoom-in-95 rounded-md px-2 py-1 text-xs shadow-md",
+        className,
       )}
     >
       {children}
     </div>,
-    container
+    container,
   );
 }
 
@@ -522,9 +525,9 @@ function MarkerLabel({
     <div
       className={cn(
         "absolute left-1/2 -translate-x-1/2 whitespace-nowrap",
-        "text-[10px] font-medium text-foreground",
+        "text-foreground text-[10px] font-medium",
         positionClasses[position],
-        className
+        className,
       )}
     >
       {children}
@@ -558,7 +561,7 @@ const positionClasses = {
 
 function ControlGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col rounded-md border border-border bg-background shadow-sm overflow-hidden [&>button:not(:last-child)]:border-b [&>button:not(:last-child)]:border-border">
+    <div className="border-border bg-background [&>button:not(:last-child)]:border-border flex flex-col overflow-hidden rounded-md border shadow-sm [&>button:not(:last-child)]:border-b">
       {children}
     </div>
   );
@@ -581,8 +584,8 @@ function ControlButton({
       aria-label={label}
       type="button"
       className={cn(
-        "flex items-center justify-center size-8 hover:bg-accent dark:hover:bg-accent/40 transition-colors",
-        disabled && "opacity-50 pointer-events-none cursor-not-allowed"
+        "hover:bg-accent dark:hover:bg-accent/40 flex size-8 items-center justify-center transition-colors",
+        disabled && "pointer-events-none cursor-not-allowed opacity-50",
       )}
       disabled={disabled}
     >
@@ -635,7 +638,7 @@ function MapControls({
         (error) => {
           console.error("Error getting location:", error);
           setWaitingForLocation(false);
-        }
+        },
       );
     }
   }, [map, onLocate]);
@@ -657,7 +660,7 @@ function MapControls({
       className={cn(
         "absolute z-10 flex flex-col gap-1.5",
         positionClasses[position],
-        className
+        className,
       )}
     >
       {showZoom && (
@@ -829,15 +832,15 @@ function MapPopup({
   return createPortal(
     <div
       className={cn(
-        "relative rounded-md border bg-popover p-3 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95",
-        className
+        "bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 relative rounded-md border p-3 shadow-md",
+        className,
       )}
     >
       {closeButton && (
         <button
           type="button"
           onClick={handleClose}
-          className="absolute top-1 right-1 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="ring-offset-background focus:ring-ring absolute top-1 right-1 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none"
           aria-label="Close popup"
         >
           <X className="h-4 w-4" />
@@ -846,7 +849,7 @@ function MapPopup({
       )}
       {children}
     </div>,
-    container
+    container,
   );
 }
 
@@ -992,7 +995,7 @@ function MapRoute({
 }
 
 type MapClusterLayerProps<
-  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties
+  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
 > = {
   /** GeoJSON FeatureCollection data or URL to fetch GeoJSON from */
   data: string | GeoJSON.FeatureCollection<GeoJSON.Point, P>;
@@ -1009,18 +1012,18 @@ type MapClusterLayerProps<
   /** Callback when an unclustered point is clicked */
   onPointClick?: (
     feature: GeoJSON.Feature<GeoJSON.Point, P>,
-    coordinates: [number, number]
+    coordinates: [number, number],
   ) => void;
   /** Callback when a cluster is clicked. If not provided, zooms into the cluster */
   onClusterClick?: (
     clusterId: number,
     coordinates: [number, number],
-    pointCount: number
+    pointCount: number,
   ) => void;
 };
 
 function MapClusterLayer<
-  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties
+  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
 >({
   data,
   clusterMaxZoom = 14,
@@ -1192,7 +1195,7 @@ function MapClusterLayer<
     const handleClusterClick = async (
       e: MapLibreGL.MapMouseEvent & {
         features?: MapLibreGL.MapGeoJSONFeature[];
-      }
+      },
     ) => {
       const features = map.queryRenderedFeatures(e.point, {
         layers: [clusterLayerId],
@@ -1207,7 +1210,7 @@ function MapClusterLayer<
       const pointCount = feature.properties?.point_count as number;
       const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [
         number,
-        number
+        number,
       ];
 
       if (onClusterClick) {
@@ -1227,7 +1230,7 @@ function MapClusterLayer<
     const handlePointClick = (
       e: MapLibreGL.MapMouseEvent & {
         features?: MapLibreGL.MapGeoJSONFeature[];
-      }
+      },
     ) => {
       if (!onPointClick || !e.features?.length) return;
 
@@ -1246,7 +1249,7 @@ function MapClusterLayer<
 
       onPointClick(
         feature as unknown as GeoJSON.Feature<GeoJSON.Point, P>,
-        coordinates
+        coordinates,
       );
     };
 
