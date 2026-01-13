@@ -10,7 +10,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z, ZodError } from "zod/v4";
 
-import type { Auth } from "@acme/auth";
+import type { Auth, Session } from "@acme/auth";
+import type { db as DbClient } from "@acme/db/client";
 import { db } from "@acme/db/client";
 
 /**
@@ -26,16 +27,28 @@ import { db } from "@acme/db/client";
  * @see https://trpc.io/docs/server/context
  */
 
+/**
+ * Explicit context type to avoid TypeScript trying to serialize
+ * complex internal Better Auth types (TS2742, TS4023, TS7056).
+ * 
+ * Note: authApi is intentionally excluded from this interface because
+ * its type contains internal Better Auth types that can't be serialized.
+ * If you need authApi in a procedure, access it through the auth instance
+ * passed to createTRPCContext.
+ */
+export interface TRPCContext {
+  session: Session | null;
+  db: typeof DbClient;
+}
+
 export const createTRPCContext = async (opts: {
   headers: Headers;
   auth: Auth;
-}) => {
-  const authApi = opts.auth.api;
-  const session = await authApi.getSession({
+}): Promise<TRPCContext> => {
+  const session = await opts.auth.api.getSession({
     headers: opts.headers,
   });
   return {
-    authApi,
     session,
     db,
   };
@@ -46,7 +59,7 @@ export const createTRPCContext = async (opts: {
  * This is where the trpc api is initialized, connecting the context and
  * transformer
  */
-const t = initTRPC.context<typeof createTRPCContext>().create({
+const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
   errorFormatter: ({ shape, error }) => ({
     ...shape,
@@ -126,3 +139,51 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+/**
+ * Admin procedure
+ *
+ * Only accessible to users with role "admin" or "superadmin".
+ * Used for admin panel operations like managing presentations.
+ */
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const userRole = (ctx.session.user as { role?: string }).role;
+
+  if (!userRole || !["admin", "superadmin"].includes(userRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      userRole: userRole as "admin" | "superadmin",
+    },
+  });
+});
+
+/**
+ * Super Admin procedure
+ *
+ * Only accessible to users with role "superadmin".
+ * Used for user management operations.
+ */
+export const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const userRole = (ctx.session.user as { role?: string }).role;
+
+  if (userRole !== "superadmin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Super admin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      userRole: "superadmin" as const,
+    },
+  });
+});
