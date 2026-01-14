@@ -126,17 +126,19 @@ export default function OrganizationDetailPage() {
 
             {/* Quick actions */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Card className="group cursor-pointer opacity-50">
-                    <CardHeader className="flex flex-row items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <FolderKanban className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <CardTitle className="text-base">Presentaciones</CardTitle>
-                            <CardDescription>Próximamente</CardDescription>
-                        </div>
-                    </CardHeader>
-                </Card>
+                <Link href={`/dashboard/organizations/${orgId}/presentations`}>
+                    <Card className="group cursor-pointer transition-shadow hover:shadow-md">
+                        <CardHeader className="flex flex-row items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <FolderKanban className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base">Presentaciones</CardTitle>
+                                <CardDescription>Ver y crear presentaciones</CardDescription>
+                            </div>
+                        </CardHeader>
+                    </Card>
+                </Link>
 
                 <Link href={`/dashboard/organizations/${orgId}/settings/members`}>
                     <Card className="group cursor-pointer transition-shadow hover:shadow-md">
@@ -169,11 +171,19 @@ export default function OrganizationDetailPage() {
 
             {/* Presentations section placeholder */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Presentaciones</CardTitle>
-                    <CardDescription>
-                        Las presentaciones de esta organización aparecerán aquí
-                    </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Presentaciones</CardTitle>
+                        <CardDescription>
+                            Las presentaciones de esta organización aparecerán aquí
+                        </CardDescription>
+                    </div>
+                    <Button asChild>
+                        <Link href={`/dashboard/organizations/${orgId}/presentations`}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nueva Presentación
+                        </Link>
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-12">
@@ -181,9 +191,10 @@ export default function OrganizationDetailPage() {
                         <p className="mt-4 text-sm text-muted-foreground">
                             No hay presentaciones todavía
                         </p>
-                        <Button className="mt-4" disabled>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Nueva Presentación
+                        <Button asChild variant="outline" className="mt-4">
+                            <Link href={`/dashboard/organizations/${orgId}/presentations`}>
+                                Ver todas las presentaciones
+                            </Link>
                         </Button>
                     </div>
                 </CardContent>

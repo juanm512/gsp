@@ -18,7 +18,6 @@ interface AdminSidebarProps {
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Tareas", href: "/tasks", icon: ClipboardList },
     { name: "Presentaciones", href: "/presentations", icon: FolderKanban },
 ];
 
