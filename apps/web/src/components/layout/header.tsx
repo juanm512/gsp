@@ -2,6 +2,7 @@
 
 import { ThemeToggle } from "@acme/ui/theme";
 
+import { InvitationNotifications } from "~/components/layout/invitation-notifications";
 import { OrgSelector } from "~/components/organizations/org-selector";
 import { UserMenu } from "~/components/layout/user-menu";
 
@@ -22,8 +23,9 @@ export function Header({ user }: HeaderProps) {
                 <OrgSelector />
             </div>
 
-            {/* Right side - Theme toggle & User menu */}
-            <div className="flex items-center gap-4">
+            {/* Right side - Notifications, Theme toggle & User menu */}
+            <div className="flex items-center gap-2">
+                <InvitationNotifications />
                 <ThemeToggle />
                 <UserMenu user={user} />
             </div>
