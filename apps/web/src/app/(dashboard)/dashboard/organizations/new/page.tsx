@@ -17,7 +17,7 @@ export default function NewOrganizationPage() {
         <div className="mx-auto max-w-2xl space-y-6">
             {/* Back button */}
             <Button asChild variant="ghost" size="sm">
-                <Link href="/organizations">
+                <Link href="/dashboard/organizations">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver a Organizaciones
                 </Link>

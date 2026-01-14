@@ -45,16 +45,16 @@ export function UserMenu({ user }: UserMenuProps) {
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="relative h-10 w-10 rounded-full"
+                    className="relative aspect-square h-10 w-10 rounded-full p-0 m-0"
                 >
                     {user.image ? (
                         <img
                             src={user.image}
                             alt={user.name}
-                            className="h-10 w-10 rounded-full object-cover"
+                            className="h-full w-full rounded-full object-cover"
                         />
                     ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                        <div className="flex h-full w-full items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
                             {initials}
                         </div>
                     )}
@@ -69,15 +69,9 @@ export function UserMenu({ user }: UserMenuProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                    <a href="/profile" className="flex items-center">
+                    <a href="/dashboard/settings" className="flex items-center">
                         <User className="mr-2 h-4 w-4" />
                         Perfil
-                    </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <a href="/settings" className="flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Configuración
                     </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

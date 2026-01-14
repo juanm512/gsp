@@ -63,7 +63,7 @@ export function OrgList() {
                     presentaciones.
                 </p>
                 <Button asChild className="mt-6">
-                    <Link href="/organizations/new">
+                    <Link href="/dashboard/organizations/new">
                         <Plus className="mr-2 h-4 w-4" />
                         Crear Organización
                     </Link>

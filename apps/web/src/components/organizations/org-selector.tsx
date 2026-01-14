@@ -78,7 +78,7 @@ export function OrgSelector() {
     if (organizations.length === 0) {
         return (
             <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link href="/organizations/new">
+                <Link href="/dashboard/organizations/new">
                     <Plus className="h-4 w-4" />
                     Crear Organización
                 </Link>
@@ -114,13 +114,13 @@ export function OrgSelector() {
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                    <Link href="/organizations" className="flex items-center gap-2">
+                    <Link href="/dashboard/organizations" className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />
                         Ver todas
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                    <Link href="/organizations/new" className="flex items-center gap-2">
+                    <Link href="/dashboard/organizations/new" className="flex items-center gap-2">
                         <Plus className="h-4 w-4" />
                         Crear nueva
                     </Link>

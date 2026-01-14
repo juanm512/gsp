@@ -17,7 +17,7 @@ export default function OrganizationsPage() {
                     </p>
                 </div>
                 <Button asChild>
-                    <Link href="/organizations/new">
+                    <Link href="/dashboard/organizations/new">
                         <Plus className="mr-2 h-4 w-4" />
                         Nueva Organización
                     </Link>

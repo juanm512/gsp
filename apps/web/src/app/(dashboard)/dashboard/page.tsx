@@ -32,7 +32,7 @@ export default async function DashboardPage() {
             {/* Quick actions */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Card className="group cursor-pointer transition-shadow hover:shadow-md">
-                    <Link href="/organizations/new">
+                    <Link href="/dashboard/organizations/new">
                         <CardHeader className="flex flex-row items-center gap-4">
                             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <Plus className="h-6 w-6" />
@@ -46,7 +46,7 @@ export default async function DashboardPage() {
                 </Card>
 
                 <Card className="group cursor-pointer transition-shadow hover:shadow-md">
-                    <Link href="/organizations">
+                    <Link href="/dashboard/organizations">
                         <CardHeader className="flex flex-row items-center gap-4">
                             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
                                 <Building2 className="h-6 w-6" />
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
                         </p>
                     </div>
                     <Button asChild variant="outline" size="sm">
-                        <Link href="/organizations">
+                        <Link href="/dashboard/organizations">
                             Ver todas
                             <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>

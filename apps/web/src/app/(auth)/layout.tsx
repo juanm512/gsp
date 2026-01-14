@@ -1,21 +1,20 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import Link from "next/link";
-
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@acme/ui/card";
 import { ThemeToggle } from "@acme/ui/theme";
 
-export default function AuthLayout({
+import { getSession } from "~/auth/server";
+
+export default async function AuthLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    // If user is already logged in, redirect to dashboard
+    const session = await getSession();
+    if (session) {
+        redirect("/dashboard");
+    }
+
     return (
         <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 px-4 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
             {/* Background pattern */}
@@ -27,12 +26,12 @@ export default function AuthLayout({
             </div>
 
             {/* Logo/Brand link */}
-            <Link
+            <a
                 href="/"
                 className="absolute left-6 top-6 flex items-center gap-2 text-xl font-bold tracking-tight transition-colors hover:text-primary"
             >
                 <span className="text-primary">GSP</span>
-            </Link>
+            </a>
 
             {/* Main content */}
             <div className="relative z-10 w-full max-w-md">{children}</div>

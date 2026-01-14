@@ -61,7 +61,7 @@ export function OrgCard({ org }: OrgCardProps) {
             </CardContent>
             <CardFooter>
                 <Button asChild variant="ghost" size="sm" className="w-full">
-                    <Link href={`/organizations/${org.id}`}>
+                    <Link href={`/dashboard/organizations/${org.id}`}>
                         Ver detalles
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>

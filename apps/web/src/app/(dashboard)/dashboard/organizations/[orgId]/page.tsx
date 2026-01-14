@@ -73,7 +73,7 @@ export default function OrganizationDetailPage() {
         return (
             <div className="space-y-6">
                 <Button asChild variant="ghost" size="sm">
-                    <Link href="/organizations">
+                    <Link href="/dashboard/organizations">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Volver a Organizaciones
                     </Link>
@@ -91,7 +91,7 @@ export default function OrganizationDetailPage() {
         <div className="space-y-6">
             {/* Back button */}
             <Button asChild variant="ghost" size="sm">
-                <Link href="/organizations">
+                <Link href="/dashboard/organizations">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver a Organizaciones
                 </Link>
@@ -117,7 +117,7 @@ export default function OrganizationDetailPage() {
                     </div>
                 </div>
                 <Button asChild variant="outline" size="sm">
-                    <Link href={`/organizations/${orgId}/settings`}>
+                    <Link href={`/dashboard/organizations/${orgId}/settings`}>
                         <Settings className="mr-2 h-4 w-4" />
                         Configuración
                     </Link>
@@ -138,7 +138,7 @@ export default function OrganizationDetailPage() {
                     </CardHeader>
                 </Card>
 
-                <Link href={`/organizations/${orgId}/settings/members`}>
+                <Link href={`/dashboard/organizations/${orgId}/settings/members`}>
                     <Card className="group cursor-pointer transition-shadow hover:shadow-md">
                         <CardHeader className="flex flex-row items-center gap-4">
                             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
@@ -152,7 +152,7 @@ export default function OrganizationDetailPage() {
                     </Card>
                 </Link>
 
-                <Link href={`/organizations/${orgId}/settings/members`}>
+                <Link href={`/dashboard/organizations/${orgId}/settings/members`}>
                     <Card className="group cursor-pointer transition-shadow hover:shadow-md">
                         <CardHeader className="flex flex-row items-center gap-4">
                             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-400">

@@ -72,7 +72,7 @@ export function CreateOrgForm() {
                 });
             }
 
-            router.push("/organizations");
+            router.push("/dashboard/organizations");
             router.refresh();
         } catch {
             setError("Error al crear la organización. Por favor intenta de nuevo.");

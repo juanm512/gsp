@@ -34,7 +34,7 @@ export function LoginForm() {
                 return;
             }
 
-            router.push("/");
+            router.push("/dashboard");
             router.refresh();
         } catch {
             setError("Error al iniciar sesión. Por favor intenta de nuevo.");

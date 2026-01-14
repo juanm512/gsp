@@ -68,11 +68,11 @@ export default function OrgSettingsLayout({
                 setIsOwner(true);
             } else {
                 // Redirect if not owner
-                router.push(`/organizations/${orgId}`);
+                router.push(`/dashboard/organizations/${orgId}`);
             }
         } catch (error) {
             console.error("Error checking access:", error);
-            router.push("/organizations");
+            router.push("/dashboard/organizations");
         } finally {
             setIsLoading(false);
         }
@@ -90,13 +90,13 @@ export default function OrgSettingsLayout({
         return null;
     }
 
-    const basePath = `/organizations/${orgId}/settings`;
+    const basePath = `/dashboard/organizations/${orgId}/settings`;
 
     return (
         <div className="space-y-6">
             {/* Back button */}
             <Button asChild variant="ghost" size="sm">
-                <Link href={`/organizations/${orgId}`}>
+                <Link href={`/dashboard/organizations/${orgId}`}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver a {org?.name || "Organización"}
                 </Link>
