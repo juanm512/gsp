@@ -65,19 +65,6 @@ export function AdminSidebar({ userRole }: AdminSidebarProps) {
                     );
                 })}
             </nav>
-
-            {/* Role badge */}
-            <div className="absolute bottom-4 left-4 right-4">
-                <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-                    <p className="text-xs text-slate-500">Conectado como</p>
-                    <p className={cn(
-                        "mt-1 text-sm font-medium",
-                        isSuperadmin ? "text-amber-400" : "text-blue-400"
-                    )}>
-                        {isSuperadmin ? "Super Admin" : "Administrador"}
-                    </p>
-                </div>
-            </div>
         </aside>
     );
 }

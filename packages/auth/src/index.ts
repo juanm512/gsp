@@ -27,11 +27,13 @@ export function initAuth<TExtraPlugins extends BetterAuthPlugin[] = []>(options:
   const resend = new Resend(options.resendApiKey);
 
   // Email sender helper
+  // TODO: Remove hardcoded email after verifying a domain in Resend
+  const TEST_EMAIL = "512juanm@gmail.com"; // Resend test mode only sends here
   const sendEmail = async (to: string, subject: string, html: string) => {
     await resend.emails.send({
       from: "GSP <onboarding@resend.dev>", // Test mode - change when you have verified domain
-      to,
-      subject,
+      to: TEST_EMAIL, // Hardcoded for testing with resend.dev domain
+      subject: `[Para: ${to}] ${subject}`, // Include real recipient in subject for clarity
       html,
     });
   };
@@ -108,7 +110,7 @@ export function initAuth<TExtraPlugins extends BetterAuthPlugin[] = []>(options:
       // Roles: user (default), admin, superadmin
       admin({
         defaultRole: "user",
-        adminRoles: ["admin", "superadmin"],
+        adminRoles: ["superadmin", "admin"],
       }),
 
       ...(options.extraPlugins ?? []),
@@ -128,6 +130,11 @@ export function initAuth<TExtraPlugins extends BetterAuthPlugin[] = []>(options:
     onAPIError: {
       onError(error, ctx) {
         console.error("BETTER AUTH API ERROR", error, ctx);
+        // console.log()
+        // console.log()
+        // console.log("error json", JSON.stringify(error));
+        // console.log()
+        // console.log()
       },
     },
   } satisfies BetterAuthOptions;

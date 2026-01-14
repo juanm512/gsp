@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Crown,
     Loader2,
@@ -28,7 +29,7 @@ import {
 import { Input } from "@acme/ui/input";
 import { cn } from "@acme/ui";
 
-import { authClient } from "~/auth/client";
+import { useTRPC } from "~/trpc/react";
 import { ChangeRoleDialog } from "./change-role-dialog";
 
 type UserData = {
@@ -48,48 +49,28 @@ const roleConfig: Record<string, { label: string; icon: typeof Crown; color: str
 };
 
 export function UserTable() {
-    const [users, setUsers] = useState<UserData[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const trpc = useTRPC();
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
     const [showRoleDialog, setShowRoleDialog] = useState(false);
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
+    // Use tRPC to fetch users
+    const { data, isLoading, refetch } = useQuery(
+        trpc.admin.listUsers.queryOptions({
+            limit: 100,
+            search: search || undefined,
+            roleFilter: roleFilter as "all" | "user" | "admin" | "superadmin",
+        })
+    );
 
-    const loadUsers = async () => {
-        setIsLoading(true);
-        try {
-            const result = await authClient.admin.listUsers({
-                query: {
-                    limit: 100,
-                },
-            });
-
-            if (result.data && 'users' in result.data) {
-                setUsers(result.data.users as UserData[]);
-            }
-        } catch (error) {
-            console.error("Error loading users:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const users = (data?.users ?? []) as UserData[];
 
     const handleRoleChange = (user: UserData) => {
         setSelectedUser(user);
         setShowRoleDialog(true);
     };
-
-    const filteredUsers = users.filter((user) => {
-        const matchesSearch =
-            user.name?.toLowerCase().includes(search.toLowerCase()) ||
-            user.email.toLowerCase().includes(search.toLowerCase());
-        const matchesRole = roleFilter === "all" || user.role === roleFilter;
-        return matchesSearch && matchesRole;
-    });
 
     if (isLoading) {
         return (
@@ -115,7 +96,7 @@ export function UserTable() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={loadUsers}
+                            onClick={() => refetch()}
                             className="border-slate-700 text-slate-300"
                         >
                             <RefreshCw className="mr-2 h-4 w-4" />
@@ -145,12 +126,12 @@ export function UserTable() {
                 </CardHeader>
                 <CardContent>
                     <div className="divide-y divide-slate-700">
-                        {filteredUsers.length === 0 ? (
+                        {users.length === 0 ? (
                             <div className="py-8 text-center text-slate-500">
                                 No se encontraron usuarios
                             </div>
                         ) : (
-                            filteredUsers.map((user) => {
+                            users.map((user) => {
                                 const role = roleConfig[user.role] || roleConfig.user;
                                 const RoleIcon = role.icon;
 
@@ -236,7 +217,7 @@ export function UserTable() {
                     onOpenChange={setShowRoleDialog}
                     onSuccess={() => {
                         setShowRoleDialog(false);
-                        loadUsers();
+                        refetch();
                     }}
                 />
             )}

@@ -1,53 +1,129 @@
+import type { TRPCRouterRecord } from "@trpc/server";
+import { z } from "zod/v4";
+import { eq, desc, like, or } from "@acme/db";
 
-// export const adminRouter = createTRPCRouter({
-//     // Obtener tareas pendientes
-//     getTasks: adminProcedure
-//         .input(getTasksSchema)
-//         .query(async ({ ctx, input }) => {
-//             // Filtrar por tipo, status, prioridad
-//             // Ordenar por prioridad y fecha
-//         }),
+import { user } from "@acme/db/schema";
 
-//     // Tomar tarea (asignar a admin actual)
-//     claimTask: adminProcedure
-//         .input(z.string())
-//         .mutation(async ({ ctx, input }) => {
-//             // Asignar tarea al admin
-//             // Actualizar status a IN_PROGRESS
-//         }),
+import { superAdminProcedure } from "../trpc";
 
-//     // Descargar archivo para procesar
-//     getDownloadUrl: adminProcedure
-//         .input(z.object({ taskId: z.string(), fileType: z.string() }))
-//         .query(async ({ ctx, input }) => {
-//             // Generar presigned URL de descarga
-//         }),
+export const adminRouter = {
+    /**
+     * List all users (superadmin only)
+     */
+    listUsers: superAdminProcedure
+        .input(
+            z.object({
+                limit: z.number().min(1).max(100).optional().default(50),
+                offset: z.number().min(0).optional().default(0),
+                search: z.string().optional(),
+                roleFilter: z.enum(["all", "user", "admin", "superadmin"]).optional().default("all"),
+            }).optional()
+        )
+        .query(async ({ ctx, input }) => {
+            const { limit = 50, offset = 0, search, roleFilter = "all" } = input ?? {};
 
-//     // Subir archivo procesado
-//     uploadProcessedFile: adminProcedure
-//         .input(uploadProcessedFileSchema)
-//         .mutation(async ({ ctx, input }) => {
-//             // Guardar archivo en S3/R2
-//             // Crear registro de ProcessedFile
-//             // Actualizar tarea
-//             // Crear siguiente tarea si aplica
-//         }),
+            let query = ctx.db
+                .select({
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    emailVerified: user.emailVerified,
+                    image: user.image,
+                    role: user.role,
+                    banned: user.banned,
+                    banReason: user.banReason,
+                    banExpires: user.banExpires,
+                    createdAt: user.createdAt,
+                })
+                .from(user)
+                .orderBy(desc(user.createdAt))
+                .limit(limit)
+                .offset(offset);
 
-//     // Completar tarea
-//     completeTask: adminProcedure
-//         .input(completeTaskSchema)
-//         .mutation(async ({ ctx, input }) => {
-//             // Marcar como completado
-//             // Registrar notas
-//             // Triggear siguiente paso
-//         }),
+            // Build where conditions
+            const conditions = [];
 
-//     // Rechazar material
-//     rejectUpload: adminProcedure
-//         .input(rejectUploadSchema)
-//         .mutation(async ({ ctx, input }) => {
-//             // Actualizar upload status a REJECTED
-//             // Guardar motivo
-//             // Notificar al cliente
-//         }),
-// });
+            if (search) {
+                conditions.push(
+                    or(
+                        like(user.name, `%${search}%`),
+                        like(user.email, `%${search}%`)
+                    )
+                );
+            }
+
+            if (roleFilter !== "all") {
+                conditions.push(eq(user.role, roleFilter));
+            }
+
+            const users = await query.where(conditions.length > 0 ? or(...conditions) : undefined);
+
+            // Get total count
+            const totalResult = await ctx.db
+                .select({ count: user.id })
+                .from(user);
+
+            return {
+                users: users.map((u) => ({
+                    ...u,
+                    role: u.role ?? "user", // Default to "user" if null
+                })),
+                total: totalResult.length,
+            };
+        }),
+
+    /**
+     * Change user role (superadmin only)
+     */
+    setUserRole: superAdminProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                role: z.enum(["user", "admin", "superadmin"]),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { userId, role } = input;
+
+            // Don't allow changing own role
+            if (userId === ctx.session.user.id) {
+                throw new Error("No puedes cambiar tu propio rol");
+            }
+
+            await ctx.db.update(user).set({ role }).where(eq(user.id, userId));
+
+            return { success: true };
+        }),
+
+    /**
+     * Ban/unban user (superadmin only)
+     */
+    setBanStatus: superAdminProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                banned: z.boolean(),
+                banReason: z.string().optional(),
+                banExpires: z.date().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { userId, banned, banReason, banExpires } = input;
+
+            // Don't allow banning self
+            if (userId === ctx.session.user.id) {
+                throw new Error("No puedes banearte a ti mismo");
+            }
+
+            await ctx.db
+                .update(user)
+                .set({
+                    banned,
+                    banReason: banned ? banReason : null,
+                    banExpires: banned ? banExpires : null,
+                })
+                .where(eq(user.id, userId));
+
+            return { success: true };
+        }),
+} satisfies TRPCRouterRecord;

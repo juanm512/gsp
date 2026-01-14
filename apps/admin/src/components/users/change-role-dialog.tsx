@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Crown, Loader2, Shield, User } from "lucide-react";
 
 import { Button } from "@acme/ui/button";
@@ -14,7 +15,7 @@ import {
 } from "@acme/ui/dialog";
 import { cn } from "@acme/ui";
 
-import { authClient } from "~/auth/client";
+import { useTRPC } from "~/trpc/react";
 
 interface ChangeRoleDialogProps {
     user: {
@@ -61,9 +62,20 @@ export function ChangeRoleDialog({
     onOpenChange,
     onSuccess,
 }: ChangeRoleDialogProps) {
+    const trpc = useTRPC();
     const [selectedRole, setSelectedRole] = useState(user.role);
-    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+
+    const setUserRoleMutation = useMutation(
+        trpc.admin.setUserRole.mutationOptions({
+            onSuccess: () => {
+                onSuccess();
+            },
+            onError: (err) => {
+                setError(err.message ?? "Error al cambiar el rol");
+            },
+        })
+    );
 
     const handleSubmit = async () => {
         if (selectedRole === user.role) {
@@ -71,27 +83,14 @@ export function ChangeRoleDialog({
             return;
         }
 
-        setIsLoading(true);
         setError("");
-
-        try {
-            const result = await authClient.admin.setRole({
-                userId: user.id,
-                role: selectedRole,
-            });
-
-            if (result.error) {
-                setError(result.error.message ?? "Error al cambiar el rol");
-                return;
-            }
-
-            onSuccess();
-        } catch {
-            setError("Error al cambiar el rol");
-        } finally {
-            setIsLoading(false);
-        }
+        setUserRoleMutation.mutate({
+            userId: user.id,
+            role: selectedRole as "user" | "admin" | "superadmin",
+        });
     };
+
+    const isLoading = setUserRoleMutation.isPending;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
