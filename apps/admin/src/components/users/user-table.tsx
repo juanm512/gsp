@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+    Ban,
     Crown,
     Loader2,
     MoreHorizontal,
     RefreshCw,
     Shield,
     User,
+    UserCheck
 } from "lucide-react";
 
 import { Button } from "@acme/ui/button";
@@ -31,6 +33,7 @@ import { cn } from "@acme/ui";
 
 import { useTRPC } from "~/trpc/react";
 import { ChangeRoleDialog } from "./change-role-dialog";
+import { BanUserDialog } from "./ban-user-dialog";
 
 type UserData = {
     id: string;
@@ -40,6 +43,8 @@ type UserData = {
     image?: string | null;
     createdAt: Date;
     emailVerified: boolean;
+    banned: boolean | null;
+    banReason: string | null;
 };
 
 const roleConfig: Record<string, { label: string; icon: typeof Crown; color: string }> = {
@@ -55,6 +60,7 @@ export function UserTable() {
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
     const [showRoleDialog, setShowRoleDialog] = useState(false);
+    const [showBanDialog, setShowBanDialog] = useState(false);
 
     // Use tRPC to fetch users
     const { data, isLoading, refetch } = useQuery(
@@ -65,11 +71,24 @@ export function UserTable() {
         })
     );
 
+    const banMutation = useMutation(
+        trpc.admin.setBanStatus.mutationOptions({
+            onSuccess: () => {
+                refetch();
+            }
+        })
+    );
+
     const users = (data?.users ?? []) as UserData[];
 
     const handleRoleChange = (user: UserData) => {
         setSelectedUser(user);
         setShowRoleDialog(true);
+    };
+
+    const handleBanToggle = (user: UserData) => {
+        setSelectedUser(user);
+        setShowBanDialog(true);
     };
 
     if (isLoading) {
@@ -112,6 +131,7 @@ export function UserTable() {
                             onChange={(e) => setSearch(e.target.value)}
                             className="max-w-sm border-slate-700 bg-slate-900 text-white placeholder:text-slate-500"
                         />
+                        {/* Role filter dropdown removed or simplified if needed, keeping for now */}
                         <select
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
@@ -134,11 +154,15 @@ export function UserTable() {
                             users.map((user) => {
                                 const role = roleConfig[user.role] || roleConfig.user;
                                 const RoleIcon = role.icon;
+                                const isBanned = !!user.banned;
 
                                 return (
                                     <div
                                         key={user.id}
-                                        className="flex items-center justify-between py-4"
+                                        className={cn(
+                                            "flex items-center justify-between py-4",
+                                            isBanned && "opacity-60"
+                                        )}
                                     >
                                         <div className="flex items-center gap-3">
                                             {user.image ? (
@@ -153,7 +177,14 @@ export function UserTable() {
                                                 </div>
                                             )}
                                             <div>
-                                                <p className="font-medium text-white">{user.name}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-medium text-white">{user.name}</p>
+                                                    {isBanned && (
+                                                        <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold text-red-400 uppercase tracking-wider">
+                                                            Banned
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-sm text-slate-400">{user.email}</p>
                                             </div>
                                         </div>
@@ -195,8 +226,21 @@ export function UserTable() {
                                                         Cambiar Rol
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem disabled className="text-red-500">
-                                                        Deshabilitar
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleBanToggle(user)}
+                                                        className={isBanned ? "text-green-500" : "text-red-500"}
+                                                    >
+                                                        {isBanned ? (
+                                                            <>
+                                                                <UserCheck className="mr-2 h-4 w-4" />
+                                                                Habilitar
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Ban className="mr-2 h-4 w-4" />
+                                                                Deshabilitar
+                                                            </>
+                                                        )}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -211,15 +255,30 @@ export function UserTable() {
 
             {/* Change role dialog */}
             {selectedUser && (
-                <ChangeRoleDialog
-                    user={selectedUser}
-                    open={showRoleDialog}
-                    onOpenChange={setShowRoleDialog}
-                    onSuccess={() => {
-                        setShowRoleDialog(false);
-                        refetch();
-                    }}
-                />
+                <>
+                    <ChangeRoleDialog
+                        user={selectedUser}
+                        open={showRoleDialog}
+                        onOpenChange={setShowRoleDialog}
+                        onSuccess={() => {
+                            setShowRoleDialog(false);
+                            refetch();
+                        }}
+                    />
+                    <BanUserDialog
+                        user={selectedUser}
+                        open={showBanDialog}
+                        onOpenChange={setShowBanDialog}
+                        onConfirm={async () => {
+                            const isBanned = !!selectedUser.banned;
+                            await banMutation.mutateAsync({
+                                userId: selectedUser.id,
+                                banned: !isBanned,
+                                banReason: !isBanned ? "Deshabilitado por admin" : undefined
+                            });
+                        }}
+                    />
+                </>
             )}
         </>
     );

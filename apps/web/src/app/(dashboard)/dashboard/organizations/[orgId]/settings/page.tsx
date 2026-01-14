@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { Loader2, Trash2, TriangleAlert } from "lucide-react";
 
 import { Button } from "@acme/ui/button";
 import {
@@ -12,6 +12,15 @@ import {
     CardHeader,
     CardTitle,
 } from "@acme/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@acme/ui/dialog";
 import { Input } from "@acme/ui/input";
 import { Label } from "@acme/ui/label";
 
@@ -26,6 +35,7 @@ type Organization = {
 
 export default function OrgSettingsGeneralPage() {
     const params = useParams();
+    const router = useRouter();
     const orgId = params.orgId as string;
 
     const [org, setOrg] = useState<Organization | null>(null);
@@ -33,6 +43,9 @@ export default function OrgSettingsGeneralPage() {
     const [slug, setSlug] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteConfirmation, setDeleteConfirmation] = useState("");
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
     useEffect(() => {
@@ -81,6 +94,30 @@ export default function OrgSettingsGeneralPage() {
             setMessage({ type: "error", text: "Error al guardar los cambios" });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (deleteConfirmation !== org?.name) return;
+
+        setIsDeleting(true);
+        try {
+            const result = await authClient.organization.delete({
+                organizationId: org.id,
+            });
+
+            if (result.error) {
+                setMessage({ type: "error", text: result.error.message ?? "Error al eliminar" });
+                setShowDeleteDialog(false);
+                return;
+            }
+
+            router.push("/dashboard/organizations");
+        } catch {
+            setMessage({ type: "error", text: "Error al eliminar la organización" });
+            setShowDeleteDialog(false);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -134,8 +171,8 @@ export default function OrgSettingsGeneralPage() {
                         {message && (
                             <div
                                 className={`rounded-md p-3 text-sm ${message.type === "success"
-                                        ? "bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400"
-                                        : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+                                    ? "bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400"
+                                    : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
                                     }`}
                             >
                                 {message.text}
@@ -174,9 +211,65 @@ export default function OrgSettingsGeneralPage() {
                                 Elimina permanentemente esta organización y todos sus datos
                             </p>
                         </div>
-                        <Button variant="destructive" disabled>
-                            Eliminar
-                        </Button>
+                        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                            <DialogTrigger asChild>
+                                <Button variant="destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                                        <TriangleAlert className="h-6 w-6 text-red-600 dark:text-red-400" />
+                                    </div>
+                                    <DialogTitle className="text-center">¿Eliminar Organización?</DialogTitle>
+                                    <DialogDescription className="text-center">
+                                        Esta acción no se puede deshacer. Esto eliminará permanentemente la
+                                        organización <span className="font-bold text-foreground">{org?.name}</span> y eliminará todos sus datos.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <div className="py-4">
+                                    <Label htmlFor="confirmation" className="mb-2 block text-sm">
+                                        Escribe <span className="font-bold select-none">{org?.name}</span> para confirmar
+                                    </Label>
+                                    <Input
+                                        id="confirmation"
+                                        value={deleteConfirmation}
+                                        onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                        placeholder={org?.name}
+                                        autoComplete="off"
+                                    />
+                                </div>
+
+                                <DialogFooter className="sm:justify-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setShowDeleteDialog(false)}
+                                        disabled={isDeleting}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        onClick={handleDelete}
+                                        disabled={isDeleting || deleteConfirmation !== org?.name}
+                                    >
+                                        {isDeleting ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Eliminando...
+                                            </>
+                                        ) : (
+                                            "Eliminar Organización"
+                                        )}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </CardContent>
             </Card>

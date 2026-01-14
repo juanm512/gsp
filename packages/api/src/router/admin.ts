@@ -2,7 +2,7 @@ import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
 import { eq, desc, like, or } from "@acme/db";
 
-import { user } from "@acme/db/schema";
+import { user, organization, session } from "@acme/db/schema";
 
 import { superAdminProcedure } from "../trpc";
 
@@ -124,6 +124,53 @@ export const adminRouter = {
                 })
                 .where(eq(user.id, userId));
 
+            // If banning, revoke all sessions
+            if (banned) {
+                await ctx.db.delete(session).where(eq(session.userId, userId));
+            }
+
             return { success: true };
+        }),
+    /**
+     * List all organizations (superadmin only)
+     */
+    listOrganizations: superAdminProcedure
+        .input(
+            z.object({
+                limit: z.number().min(1).max(100).optional().default(50),
+                offset: z.number().min(0).optional().default(0),
+                search: z.string().optional(),
+            }).optional()
+        )
+        .query(async ({ ctx, input }) => {
+            const { limit = 50, offset = 0, search } = input ?? {};
+
+            let query = ctx.db
+                .select()
+                .from(organization)
+                .orderBy(desc(organization.createdAt))
+                .limit(limit)
+                .offset(offset);
+
+            // Build where conditions
+            const conditions = [];
+
+            if (search) {
+                conditions.push(
+                    like(organization.name, `%${search}%`)
+                );
+            }
+
+            const organizations = await query.where(conditions.length > 0 ? or(...conditions) : undefined);
+
+            // Get total count
+            const totalResult = await ctx.db
+                .select({ count: organization.id })
+                .from(organization);
+
+            return {
+                organizations,
+                total: totalResult.length,
+            };
         }),
 } satisfies TRPCRouterRecord;

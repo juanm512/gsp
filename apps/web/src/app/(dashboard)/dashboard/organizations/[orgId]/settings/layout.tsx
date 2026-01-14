@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
     ArrowLeft,
@@ -37,6 +37,7 @@ export default function OrgSettingsLayout({
 }) {
     const params = useParams();
     const router = useRouter();
+    const pathname = usePathname();
     const orgId = params.orgId as string;
     const [org, setOrg] = useState<Organization | null>(null);
     const [isOwner, setIsOwner] = useState(false);
@@ -136,8 +137,8 @@ export default function OrgSettingsLayout({
                             const href = `${basePath}${item.href}`;
                             const isActive =
                                 item.href === ""
-                                    ? window.location.pathname === basePath
-                                    : window.location.pathname.startsWith(href);
+                                    ? pathname === basePath
+                                    : pathname.startsWith(href);
 
                             return (
                                 <li key={item.name}>

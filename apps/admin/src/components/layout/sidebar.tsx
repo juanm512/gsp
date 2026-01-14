@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+    Building2,
     ClipboardList,
     FolderKanban,
     LayoutDashboard,
@@ -23,6 +24,7 @@ const navigation = [
 
 const superadminNav = [
     { name: "Usuarios", href: "/users", icon: Users },
+    { name: "Organizaciones", href: "/organizations", icon: Building2 },
 ];
 
 export function AdminSidebar({ userRole }: AdminSidebarProps) {

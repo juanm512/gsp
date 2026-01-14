@@ -211,19 +211,6 @@ export default function OrgMembersPage() {
                                         disabled={isInviting}
                                     />
                                 </div>
-                                <div className="w-40 space-y-2">
-                                    <Label htmlFor="role">Rol</Label>
-                                    <select
-                                        id="role"
-                                        value={inviteRole}
-                                        onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                                        disabled={isInviting}
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    >
-                                        <option value="member">Miembro</option>
-                                        <option value="admin">Administrador</option>
-                                    </select>
-                                </div>
                             </div>
 
                             {message && (
@@ -309,23 +296,6 @@ export default function OrgMembersPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    {member.role === "member" && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleUpdateRole(member.id, "admin")}
-                                                        >
-                                                            <Shield className="mr-2 h-4 w-4" />
-                                                            Hacer Administrador
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    {member.role === "admin" && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleUpdateRole(member.id, "member")}
-                                                        >
-                                                            <User className="mr-2 h-4 w-4" />
-                                                            Hacer Miembro
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         onClick={() => handleRemoveMember(member.id)}
                                                         className="text-red-600 focus:text-red-600"

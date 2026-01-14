@@ -39,14 +39,6 @@ const roles = [
         activeColor: "border-slate-400 bg-slate-800",
     },
     {
-        value: "admin",
-        label: "Administrador",
-        description: "Puede procesar tareas y gestionar presentaciones",
-        icon: Shield,
-        color: "border-blue-600/50 hover:border-blue-500",
-        activeColor: "border-blue-500 bg-blue-950",
-    },
-    {
         value: "superadmin",
         label: "Super Admin",
         description: "Acceso total, incluyendo gestión de usuarios",
