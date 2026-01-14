@@ -1,12 +1,13 @@
 {
-  "name": "@acme/api",
+  "name": "@acme/billing",
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    }
+    ".": "./src/index.ts",
+    "./env": "./env.ts",
+    "./checkout": "./src/checkout.ts",
+    "./plans": "./src/plans.ts",
+    "./webhooks": "./src/webhooks.ts"
   },
   "license": "MIT",
   "scripts": {
@@ -14,26 +15,22 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc",
     "format": "prettier --check . --ignore-path ../../.gitignore",
-    "lint": "eslint --flag unstable_native_nodejs_ts_config",
+    "lint": "eslint",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
-  },
-  "dependencies": {
-    "@acme/auth": "workspace:*",
-    "@acme/billing": "workspace:*",
-    "@acme/db": "workspace:*",
-    "@acme/storage": "workspace:*",
-    "@acme/validators": "workspace:*",
-    "@trpc/server": "catalog:",
-    "superjson": "2.2.3",
-    "zod": "catalog:"
   },
   "devDependencies": {
     "@acme/eslint-config": "workspace:*",
     "@acme/prettier-config": "workspace:*",
     "@acme/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
-  "prettier": "@acme/prettier-config"
+  "prettier": "@acme/prettier-config",
+  "dependencies": {
+    "@polar-sh/sdk": "^0.42.2",
+    "@t3-oss/env-core": "^0.13.8",
+    "zod": "catalog:"
+  }
 }

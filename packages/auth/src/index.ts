@@ -104,6 +104,29 @@ export function initAuth<TExtraPlugins extends BetterAuthPlugin[] = []>(options:
             `,
           );
         },
+        schema: {
+          organization: {
+            additionalFields: {
+              polarCustomerId: {
+                type: "string",
+                required: false,
+              },
+              polarSubscriptionId: {
+                type: "string",
+                required: false,
+              },
+              plan: {
+                type: "string", // "free" | "pro" | "enterprise"
+                required: false,
+                defaultValue: "free",
+              },
+              planExpiresAt: {
+                type: "date",
+                required: false,
+              },
+            }
+          }
+        }
       }),
 
       // Admin plugin - adds role field to user table

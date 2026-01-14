@@ -86,6 +86,10 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   createdAt: timestamp("created_at").notNull(),
   metadata: text("metadata"),
+  polarCustomerId: text("polar_customer_id"),
+  polarSubscriptionId: text("polar_subscription_id"),
+  plan: text("plan").default("free"),
+  planExpiresAt: timestamp("plan_expires_at"),
 });
 
 export const member = pgTable("member", {

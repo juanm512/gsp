@@ -39,6 +39,7 @@ import { db } from "@acme/db/client";
 export interface TRPCContext {
   session: Session | null;
   db: typeof DbClient;
+  headers: Headers;
 }
 
 export const createTRPCContext = async (opts: {
@@ -51,6 +52,7 @@ export const createTRPCContext = async (opts: {
   return {
     session,
     db,
+    headers: opts.headers,
   };
 };
 /**

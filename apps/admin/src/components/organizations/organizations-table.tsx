@@ -28,6 +28,7 @@ import {
 import { Input } from "@acme/ui/input";
 
 import { useTRPC } from "~/trpc/react";
+import { Badge } from "@acme/ui/badge";
 
 type OrganizationData = {
     id: string;
@@ -36,6 +37,7 @@ type OrganizationData = {
     logo: string | null;
     createdAt: Date;
     metadata: string | null;
+    plan?: string | null;
 };
 
 export function OrganizationsTable() {
@@ -125,6 +127,18 @@ export function OrganizationsTable() {
                                 </div>
 
                                 <div className="flex items-center gap-6">
+                                    <Badge
+                                        variant={org.plan === "pro" ? "default" : org.plan === "enterprise" ? "secondary" : "outline"}
+                                        className={
+                                            org.plan === "pro"
+                                                ? "bg-violet-600 text-white"
+                                                : org.plan === "enterprise"
+                                                    ? "bg-amber-600 text-white"
+                                                    : "border-slate-600 text-slate-400"
+                                        }
+                                    >
+                                        {org.plan === "pro" ? "Pro" : org.plan === "enterprise" ? "Enterprise" : "Free"}
+                                    </Badge>
                                     <div className="flex items-center text-sm text-slate-500">
                                         <Calendar className="mr-2 h-4 w-4" />
                                         {new Date(org.createdAt).toLocaleDateString()}
