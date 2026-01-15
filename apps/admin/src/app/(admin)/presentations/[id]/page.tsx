@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "~/trpc/react";
@@ -30,8 +30,24 @@ import {
     StarOff,
 } from "lucide-react";
 
+
 import { Button } from "@acme/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@acme/ui/card";
+import dynamic from "next/dynamic";
+
+// Dynamic imports for performance
+const GSViewer = dynamic(() => import("@acme/ui/visualizers").then(mod => mod.GSViewer), {
+    loading: () => <div className="flex items-center justify-center h-96"><Loader2 className="w-8 h-8 animate-spin text-slate-500" /></div>,
+    ssr: false
+});
+const VideoPlayer = dynamic(() => import("@acme/ui/visualizers").then(mod => mod.VideoPlayer), {
+    loading: () => <div className="flex items-center justify-center h-96"><Loader2 className="w-8 h-8 animate-spin text-slate-500" /></div>,
+    ssr: false
+});
+const ZipViewer = dynamic(() => import("@acme/ui/visualizers").then(mod => mod.ZipViewer), {
+    loading: () => <div className="flex items-center justify-center h-96"><Loader2 className="w-8 h-8 animate-spin text-slate-500" /></div>,
+    ssr: false
+});
 import { Badge } from "@acme/ui/badge";
 import { Separator } from "@acme/ui/separator";
 import { Textarea } from "@acme/ui/textarea";
@@ -110,6 +126,7 @@ export default function AdminPresentationDetailPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [activeFileUrl, setActiveFileUrl] = useState<string | null>(null);
     const [previewFile, setPreviewFile] = useState<{ url: string; type: string; name: string } | null>(null);
 
     const { data: presentation, isLoading } = useQuery(
@@ -168,6 +185,23 @@ export default function AdminPresentationDetailPage() {
     const downloadMutation = useMutation(
         trpc.presentation.adminGetDownloadUrl.mutationOptions()
     );
+
+    useEffect(() => {
+        if (!presentation?.activeFileKey) {
+            setActiveFileUrl(null);
+            return;
+        }
+
+        const fetchUrl = async () => {
+            try {
+                const result = await downloadMutation.mutateAsync({ fileKey: presentation.activeFileKey! });
+                setActiveFileUrl(result.url);
+            } catch (e) {
+                console.error("Failed to load active file url", e);
+            }
+        };
+        fetchUrl();
+    }, [presentation?.activeFileKey]);
 
     const handleDownload = async (fileKey: string) => {
         const result = await downloadMutation.mutateAsync({ fileKey });
@@ -348,12 +382,14 @@ export default function AdminPresentationDetailPage() {
 
                         <TabsContent value="visualizer" className="mt-4">
                             {presentation.activeFileKey ? (
-                                <Card className="border-slate-800 bg-slate-900 border-2 border-dashed border-slate-700 overflow-hidden relative group">
-                                    <div className="aspect-video w-full flex flex-col items-center justify-center text-slate-500 bg-slate-950">
-                                        <Box className="h-16 w-16 mb-4 opacity-50" />
-                                        <p className="font-medium text-lg">Visualizador 3D</p>
-                                        <p className="text-sm opacity-70">Mostrando: {presentation.activeFileKey.split('/').pop()}</p>
-                                    </div>
+                                <Card className="border-slate-800 bg-slate-900 border-2 border-dashed border-slate-700 overflow-hidden relative group h-[500px]">
+                                    {activeFileUrl ? (
+                                        <GSViewer url={activeFileUrl} />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full">
+                                            <Loader2 className="w-8 h-8 animate-spin text-slate-500" />
+                                        </div>
+                                    )}
                                 </Card>
                             ) : (
                                 <Card className="border-slate-800 bg-slate-900 border-2 border-dashed border-slate-700">
@@ -675,25 +711,22 @@ export default function AdminPresentationDetailPage() {
                     </DialogHeader>
                     <div className="flex-1 overflow-hidden bg-black flex items-center justify-center relative">
                         {previewFile?.type === 'video' && (
-                            <video
-                                src={previewFile.url}
-                                controls
-                                autoPlay
-                                className="max-w-full max-h-full"
-                            />
+                            <div className="w-full h-full flex items-center justify-center p-4">
+                                <VideoPlayer
+                                    src={previewFile.url}
+                                    className="max-h-full"
+                                    autoPlay
+                                />
+                            </div>
                         )}
                         {previewFile?.type === 'zip' && (
-                            <div className="text-center text-slate-500">
-                                <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium">Visualizador de Imágenes</p>
-                                <p className="text-sm">ZIP extraído y carrousel a implementar</p>
+                            <div className="w-full h-full bg-slate-950">
+                                <ZipViewer url={previewFile.url} />
                             </div>
                         )}
                         {previewFile?.type === 'gs' && (
-                            <div className="text-center text-slate-500">
-                                <Box className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium">Visualizador Gaussian Splatting</p>
-                                <p className="text-sm">Implementación pendiente</p>
+                            <div className="w-full h-full bg-slate-950 relative">
+                                <GSViewer url={previewFile.url} />
                             </div>
                         )}
                         {previewFile?.type === 'unknown' && (
