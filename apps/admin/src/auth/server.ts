@@ -20,6 +20,8 @@ export const auth = initAuth({
   productionUrl: `https://${env.VERCEL_PROJECT_PRODUCTION_URL ?? "admin.gsp.app"}`,
   secret: env.AUTH_SECRET,
   resendApiKey: env.RESEND_API_KEY,
+  emailTestMode: env.EMAIL_TEST_MODE,
+  verifiedEmailDomain: env.VERIFIED_EMAIL_DOMAIN,
   extraPlugins: [nextCookies()],
 });
 

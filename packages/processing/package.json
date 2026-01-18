@@ -24,7 +24,9 @@
   },
   "prettier": "@acme/prettier-config",
   "dependencies": {
+    "@acme/db": "workspace:*",
     "bullmq": "^5.66.5",
+    "drizzle-orm": "catalog:",
     "ioredis": "^5.9.1"
   }
 }
