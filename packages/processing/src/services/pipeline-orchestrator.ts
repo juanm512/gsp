@@ -46,9 +46,7 @@ export async function triggerNextStage(
  * Triggers execution of a specific stage
  */
 async function triggerStage(stage: any): Promise<void> {
-  // TODO: Import queues and trigger appropriate queue
-  // For now, this is a placeholder that will be implemented
-  // when we create the workers
+  const { queues } = await import("../config/queues");
 
   const jobData = {
     presentationId: stage.presentationId,
@@ -58,24 +56,24 @@ async function triggerStage(stage: any): Promise<void> {
 
   switch (stage.stage) {
     case "EXTRACT_FRAMES":
-      // await queues.extractFrames.add("process", jobData);
-      console.log(`[Pipeline] Would trigger EXTRACT_FRAMES for ${stage.id}`);
+      await queues.extractFrames.add("process", jobData);
+      console.log(`[Pipeline] Triggered EXTRACT_FRAMES for ${stage.id}`);
       break;
     case "VALIDATE_OVERLAP":
-      // await queues.validateOverlap.add("process", jobData);
-      console.log(`[Pipeline] Would trigger VALIDATE_OVERLAP for ${stage.id}`);
+      await queues.validateOverlap.add("process", jobData);
+      console.log(`[Pipeline] Triggered VALIDATE_OVERLAP for ${stage.id}`);
       break;
     case "COLMAP":
-      // await queues.colmap.add("process", jobData);
-      console.log(`[Pipeline] Would trigger COLMAP for ${stage.id}`);
+      await queues.colmap.add("process", jobData);
+      console.log(`[Pipeline] Triggered COLMAP for ${stage.id}`);
       break;
     case "BRUSH_TRAINING":
-      // await queues.brushTraining.add("process", jobData);
-      console.log(`[Pipeline] Would trigger BRUSH_TRAINING for ${stage.id}`);
+      await queues.brushTraining.add("process", jobData);
+      console.log(`[Pipeline] Triggered BRUSH_TRAINING for ${stage.id}`);
       break;
     case "CONVERT_SOG":
-      // await queues.convertSog.add("process", jobData);
-      console.log(`[Pipeline] Would trigger CONVERT_SOG for ${stage.id}`);
+      await queues.convertSog.add("process", jobData);
+      console.log(`[Pipeline] Triggered CONVERT_SOG for ${stage.id}`);
       break;
     default:
       console.warn(`[Pipeline] Unknown stage type: ${stage.stage}`);

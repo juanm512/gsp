@@ -61,75 +61,283 @@ Este paquete maneja el procesamiento automático de uploads de usuarios a travé
 
 ## 🚀 Deployment
 
-### 1. Setup Redis (Required)
+Esta guía cubre el deployment completo del sistema de procesamiento con Redis/BullMQ + Modal.
 
-```bash
-# Local development (Docker)
-docker run -d -p 6379:6379 redis:7-alpine
+### Arquitectura de Deployment
 
-# Production (Railway/Render)
-# Add Redis addon to your app
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Main App                             │
+│                   (Next.js on Vercel)                        │
+│                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│  │   Upload     │───▶│   Pipeline   │───▶│  BullMQ      │  │
+│  │   Service    │    │   Creator    │    │  Queues      │  │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘  │
+└───────────────────────────────────────────────────┼──────────┘
+                                                    │
+                           ┌────────────────────────┼────────────────────────┐
+                           │          Redis/BullMQ (Upstash)                 │
+                           └────────────────────────┬────────────────────────┘
+                                                    │
+                           ┌────────────────────────┴────────────────────────┐
+                           │                                                 │
+                  ┌────────▼────────┐                           ┌────────▼────────┐
+                  │  CPU Workers    │                           │  GPU Workers    │
+                  │  (Railway/      │                           │  (Modal)        │
+                  │   Render)       │                           │                 │
+                  │                 │                           │                 │
+                  │ • frame-        │                           │ • COLMAP        │
+                  │   extractor     │                           │ • Brush         │
+                  │ • image-        │                           │   Training      │
+                  │   validator     │                           │                 │
+                  │ • sog-          │                           │                 │
+                  │   converter     │                           │                 │
+                  └─────────────────┘                           └─────────────────┘
+                           │                                            │
+                           └────────────────┬───────────────────────────┘
+                                            │
+                                   ┌────────▼─────────┐
+                                   │   S3/R2 Storage  │
+                                   │  (Cloudflare R2) │
+                                   └──────────────────┘
 ```
 
-### 2. Setup Environment Variables
+### Paso 1: Setup Base de Datos
+
+```bash
+# Aplicar schema con processing_stage table
+pnpm db:push
+
+# Verificar que la tabla se creó correctamente
+# Conectarte a Supabase y revisar la tabla processing_stage
+```
+
+### Paso 2: Setup Redis (Upstash - Tier Gratuito)
+
+1. Crear cuenta en [Upstash](https://upstash.com/)
+2. Crear nueva base de datos Redis:
+   - Region: Elegir la más cercana a tus workers
+   - Type: Redis
+   - Plan: Free (10,000 commands/day)
+
+3. Copiar la URL de conexión:
+   ```
+   Redis URL: redis://default:xxx@xxx.upstash.io:6379
+   ```
+
+4. Agregar a tus variables de entorno:
+   ```bash
+   # .env
+   REDIS_URL="redis://default:xxx@xxx.upstash.io:6379"
+   ```
+
+### Paso 3: Setup S3/R2 Storage
+
+Si aún no tienes configurado Cloudflare R2:
+
+1. Crear bucket en Cloudflare R2
+2. Crear API token con permisos de lectura/escritura
+3. Agregar a variables de entorno:
 
 ```bash
 # .env
-REDIS_URL="redis://localhost:6379"
 S3_BUCKET="your-bucket-name"
-AWS_ACCESS_KEY_ID="your-access-key"
-AWS_SECRET_ACCESS_KEY="your-secret-key"
-S3_ENDPOINT_URL="https://your-r2-endpoint.com" # For Cloudflare R2
+AWS_ACCESS_KEY_ID="your-r2-access-key"
+AWS_SECRET_ACCESS_KEY="your-r2-secret-key"
+S3_ENDPOINT_URL="https://your-account-id.r2.cloudflarestorage.com"
 ```
 
-### 3. Deploy CPU Workers (Docker)
+### Paso 4: Deploy Modal Functions (GPU Workers)
 
 ```bash
-# Build Docker images
-cd packages/processing/docker/frame-extractor
-docker build -t frame-extractor:latest .
-
-cd ../image-validator
-docker build -t image-validator:latest .
-
-cd ../sog-converter
-docker build -t sog-converter:latest .
-
-# Deploy to Railway/Render
-# - Create new service
-# - Connect to your Docker registry
-# - Set environment variables
-# - Deploy
-```
-
-### 4. Deploy GPU Workers (Modal)
-
-```bash
-# Install Modal CLI
+# 1. Instalar Modal CLI
 pip install modal
 
-# Setup Modal
+# 2. Setup Modal (crear cuenta y autenticar)
 modal setup
 
-# Create Modal secret with S3 credentials
+# 3. Crear secret en Modal con credenciales de S3
 modal secret create aws-s3-credentials \
   S3_BUCKET=your-bucket \
-  AWS_ACCESS_KEY_ID=your-key \
-  AWS_SECRET_ACCESS_KEY=your-secret \
-  S3_ENDPOINT_URL=your-endpoint
+  AWS_ACCESS_KEY_ID=your-r2-access-key \
+  AWS_SECRET_ACCESS_KEY=your-r2-secret-key \
+  S3_ENDPOINT_URL=https://your-account-id.r2.cloudflarestorage.com
 
-# Deploy Modal functions
+# 4. Deploy funciones Modal
 cd packages/processing/modal
+
+# Deploy COLMAP processor
 modal deploy colmap_processor.py
+
+# Deploy Brush processor
 modal deploy brush_processor.py
+
+# 5. Obtener URLs de las funciones
+# Modal te dará URLs como:
+# https://your-workspace--colmap-processor-run-colmap.modal.run
+# https://your-workspace--brush-processor-train-gaussian-splatting.modal.run
 ```
 
-### 5. Run Database Migration
+6. Agregar URLs de Modal a variables de entorno:
 
 ```bash
-# Apply new schema (processing_stage table)
-pnpm db:push
+# .env
+MODAL_COLMAP_URL="https://your-workspace--colmap-processor-run-colmap.modal.run"
+MODAL_BRUSH_URL="https://your-workspace--brush-processor-train-gaussian-splatting.modal.run"
+MODAL_TOKEN="your-modal-token" # Obtener de Modal dashboard
 ```
+
+### Paso 5: Deploy CPU Workers (Railway o Render)
+
+Los CPU workers se deployean como servicios separados que corren 24/7.
+
+#### Opción A: Railway (Recomendado)
+
+1. Instalar Railway CLI:
+   ```bash
+   npm i -g @railway/cli
+   railway login
+   ```
+
+2. Crear proyecto Railway:
+   ```bash
+   railway init
+   ```
+
+3. Agregar variables de entorno en Railway:
+   - `REDIS_URL`
+   - `S3_BUCKET`
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `S3_ENDPOINT_URL`
+   - `POSTGRES_URL` (tu Supabase URL)
+
+4. Crear `Dockerfile` para workers (Railway lo detectará automáticamente):
+
+```dockerfile
+# packages/processing/Dockerfile
+FROM node:20-slim
+
+WORKDIR /app
+
+# Instalar Python y dependencias para CPU workers
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    libvips-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar dependencias Python
+RUN pip3 install --no-cache-dir \
+    boto3==1.34.* \
+    opencv-python-headless==4.9.* \
+    pillow==10.2.* \
+    numpy==1.26.*
+
+# Copy workspace files
+COPY package.json pnpm-lock.yaml ./
+COPY packages/processing ./packages/processing
+COPY packages/db ./packages/db
+
+# Install Node dependencies
+RUN npm install -g pnpm
+RUN pnpm install --frozen-lockfile
+
+# Build
+RUN pnpm --filter @acme/processing build
+
+# Start CPU workers
+WORKDIR /app/packages/processing
+CMD ["pnpm", "start:cpu"]
+```
+
+5. Deploy:
+   ```bash
+   railway up
+   ```
+
+#### Opción B: Render
+
+1. Crear cuenta en [Render](https://render.com/)
+2. Conectar tu repositorio GitHub
+3. Crear nuevo "Background Worker"
+4. Configurar:
+   - **Build Command**: `pnpm install && pnpm --filter @acme/processing build`
+   - **Start Command**: `pnpm --filter @acme/processing start:cpu`
+   - **Environment**: Node 20
+5. Agregar variables de entorno (mismo que Railway)
+6. Deploy
+
+### Paso 6: Configurar Workers en Main App
+
+Actualizar variables de entorno en tu app principal (Vercel):
+
+```bash
+# Vercel Environment Variables
+REDIS_URL="redis://default:xxx@xxx.upstash.io:6379"
+MODAL_COLMAP_URL="https://..."
+MODAL_BRUSH_URL="https://..."
+MODAL_TOKEN="..."
+S3_BUCKET="..."
+AWS_ACCESS_KEY_ID="..."
+AWS_SECRET_ACCESS_KEY="..."
+S3_ENDPOINT_URL="..."
+```
+
+### Paso 7: Verificar Deployment
+
+1. **Test upload flow**:
+   ```bash
+   # Subir un video de prueba
+   # El sistema debería:
+   # 1. Crear stages en la DB
+   # 2. Agregar primer job a Redis
+   # 3. CPU worker procesa frame extraction
+   # 4. Siguiente stage se triggerea automáticamente
+   ```
+
+2. **Monitorear workers**:
+   ```bash
+   # Railway/Render logs
+   railway logs
+
+   # Modal logs
+   modal app logs
+   ```
+
+3. **Verificar Redis**:
+   - Ir al dashboard de Upstash
+   - Ver métricas de commands/day
+   - Verificar que los jobs se están procesando
+
+### Paso 8: Scaling (Opcional)
+
+**CPU Workers (Railway/Render)**:
+- Horizontal scaling: Deployer múltiples instancias del mismo worker
+- Cada instancia procesará jobs en paralelo
+- Railway/Render cobra por instancia
+
+**GPU Workers (Modal)**:
+- Auto-scaling: Modal escala automáticamente según demanda
+- Solo pagas por compute time (no por idle)
+- Modal maneja todo el scaling por ti
+
+**Redis/BullMQ**:
+- Upstash Free: 10,000 commands/day
+- Upstash Pro: 100,000+ commands/day ($10/mes)
+
+### Costos Estimados (Producción Baja-Media)
+
+| Servicio | Plan | Costo/mes |
+|----------|------|-----------|
+| Upstash Redis | Free | $0 |
+| Railway CPU Workers | Hobby | $5 |
+| Modal GPU (10 jobs/día) | Pay-as-you-go | ~$5-10 |
+| Cloudflare R2 | Free tier | $0 |
+| **Total** | | **~$10-15/mes** |
 
 ## 🔧 Usage
 
