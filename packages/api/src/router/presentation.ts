@@ -4,6 +4,7 @@ import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, count, isNull } from "@acme/db";
 import { storage, getMimeType, sanitizeFilename } from "@acme/storage";
+import { createPipelineStages, triggerNextStage } from "@acme/processing";
 
 import { protectedProcedure, adminProcedure } from "../trpc";
 import { presentation, upload, processedFile, organization, member } from "@acme/db/schema";
@@ -344,13 +345,25 @@ export const presentationRouter = {
                 throw new TRPCError({ code: "BAD_REQUEST", message: "File not found in storage." });
             }
 
-            // No upload status to update
-
-            // Update presentation status to pending_review
+            // Update presentation with upload info and set to processing
             await ctx.db
                 .update(presentation)
-                .set({ status: "pending_review" })
+                .set({
+                    status: "processing",
+                    uploadFileKey: existingUpload.fileKey,
+                    uploadFileSize: existingUpload.fileSize,
+                })
                 .where(eq(presentation.id, existingUpload.presentationId));
+
+            // Create pipeline stages based on upload type
+            await createPipelineStages(
+                ctx.db,
+                existingUpload.presentationId,
+                existingUpload.type
+            );
+
+            // Trigger the first stage
+            await triggerNextStage(ctx.db, existingUpload.presentationId);
 
             return { success: true, upload: existingUpload };
         }),
