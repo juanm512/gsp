@@ -2,7 +2,7 @@ import { Worker, Job } from "bullmq";
 import { Redis } from "ioredis";
 import { db } from "@acme/db/client";
 import { processingStage } from "@acme/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from "@acme/db";
 
 interface ColmapJobData {
   presentationId: string;
@@ -54,7 +54,7 @@ async function callModalColmap(jobData: ColmapJobData): Promise<ColmapResult> {
     throw new Error(`Modal COLMAP failed: ${error}`);
   }
 
-  return await response.json();
+  return await response.json() as ColmapResult;
 }
 
 // Create worker

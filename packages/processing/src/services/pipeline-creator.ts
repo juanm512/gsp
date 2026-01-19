@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq } from "@acme/db";
 
 type UploadType = "video" | "images_zip" | "gaussian_file";
 

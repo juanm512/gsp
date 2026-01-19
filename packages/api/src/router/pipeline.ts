@@ -102,7 +102,7 @@ export const pipelineRouter = {
         stageId: z.string(),
         outputFileKey: z.string().optional(),
         outputFileSize: z.number().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.object(z.unknown()).optional(),
         logs: z.string().optional(),
       }),
     )

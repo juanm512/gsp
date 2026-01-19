@@ -39,8 +39,8 @@ RUN pnpm --filter @acme/processing build
 # Set working directory to processing package
 WORKDIR /app/packages/processing
 
-# Default: Start all CPU workers
-CMD ["pnpm", "start:cpu"]
+# Start all workers (CPU + Modal bridges)
+CMD ["pnpm", "start"]
 
 # For specific workers, override CMD:
 # docker run -e WORKER_TYPE=frame-extractor ...

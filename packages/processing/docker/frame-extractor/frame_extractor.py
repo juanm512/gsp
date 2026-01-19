@@ -73,13 +73,13 @@ def main():
     stage_id = job_data["stageId"]
     input_file_key = job_data["inputFileKey"]
 
-    # S3 configuration
-    s3_bucket = os.environ["S3_BUCKET"]
+    # Storage configuration
+    s3_bucket = os.environ["STORAGE_BUCKET_NAME"]
     s3_client = boto3.client(
         "s3",
-        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-        endpoint_url=os.environ.get("S3_ENDPOINT_URL"),
+        aws_access_key_id=os.environ.get("STORAGE_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
+        endpoint_url=os.environ.get("STORAGE_ENDPOINT"),
     )
 
     # Create temporary directory

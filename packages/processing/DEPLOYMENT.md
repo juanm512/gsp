@@ -6,15 +6,15 @@ Guía rápida para deployar el sistema completo de procesamiento.
 
 Antes de comenzar, asegúrate de tener:
 
-- [ ] Cuenta en Supabase (PostgreSQL)
-- [ ] Cuenta en Cloudflare R2 (S3-compatible storage)
-- [ ] Cuenta en Upstash (Redis gratis)
+- [x] Cuenta en Supabase (PostgreSQL)
+- [x] Cuenta en Cloudflare R2 (S3-compatible storage)
+- [x] Cuenta en Upstash (Redis gratis)
 - [ ] Cuenta en Modal (GPU compute)
 - [ ] Cuenta en Railway o Render (CPU workers)
 
 ## 📋 Deployment en 30 Minutos
 
-### 1. Base de Datos (5 min)
+### x 1. Base de Datos (5 min)
 
 ```bash
 # En la raíz del proyecto
@@ -23,7 +23,7 @@ pnpm db:push
 
 Verifica en Supabase que la tabla `processing_stage` se creó correctamente.
 
-### 2. Redis (5 min)
+### x 2. Redis (5 min)
 
 1. Ir a [upstash.com](https://upstash.com)
 2. Create Database → Redis
@@ -43,11 +43,11 @@ pip install modal
 modal setup
 
 # Crear secret
-modal secret create aws-s3-credentials \
-  S3_BUCKET=your-bucket \
-  AWS_ACCESS_KEY_ID=your-key \
-  AWS_SECRET_ACCESS_KEY=your-secret \
-  S3_ENDPOINT_URL=https://your-r2-url
+modal secret create storage-credentials \
+  STORAGE_BUCKET_NAME=your-bucket \
+  STORAGE_ACCESS_KEY_ID=your-key \
+  STORAGE_SECRET_ACCESS_KEY=your-secret \
+  STORAGE_ENDPOINT=https://your-r2-url
 
 # Deploy
 cd packages/processing/modal
@@ -77,10 +77,10 @@ railway init
 
 # Agregar variables de entorno en Railway dashboard:
 # - REDIS_URL
-# - S3_BUCKET
-# - AWS_ACCESS_KEY_ID
-# - AWS_SECRET_ACCESS_KEY
-# - S3_ENDPOINT_URL
+# - STORAGE_BUCKET_NAME
+# - STORAGE_ACCESS_KEY_ID
+# - STORAGE_SECRET_ACCESS_KEY
+# - STORAGE_ENDPOINT
 # - POSTGRES_URL
 
 # Deploy
@@ -98,10 +98,10 @@ REDIS_URL=...
 MODAL_COLMAP_URL=...
 MODAL_BRUSH_URL=...
 MODAL_TOKEN=...
-S3_BUCKET=...
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-S3_ENDPOINT_URL=...
+STORAGE_BUCKET_NAME=...
+STORAGE_ACCESS_KEY_ID=...
+STORAGE_SECRET_ACCESS_KEY=...
+STORAGE_ENDPOINT=...
 POSTGRES_URL=... (ya existe)
 ```
 

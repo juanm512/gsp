@@ -25,7 +25,7 @@ colmap_image = (
     gpu="T4",  # T4 is sufficient for COLMAP
     timeout=3600,  # 1 hour timeout
     memory=32768,  # 32 GB RAM
-    secrets=[modal.Secret.from_name("aws-s3-credentials")],
+    secrets=[modal.Secret.from_name("storage-credentials")],
 )
 def run_colmap(job_data: dict) -> dict:
     """
@@ -44,13 +44,13 @@ def run_colmap(job_data: dict) -> dict:
     stage_id = job_data["stageId"]
     input_file_key = job_data["inputFileKey"]
 
-    # S3 configuration from environment (set via Modal secrets)
-    s3_bucket = os.environ["S3_BUCKET"]
+    # Storage configuration from environment (set via Modal secrets)
+    s3_bucket = os.environ["STORAGE_BUCKET_NAME"]
     s3_client = boto3.client(
         "s3",
-        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-        endpoint_url=os.environ.get("S3_ENDPOINT_URL"),
+        aws_access_key_id=os.environ.get("STORAGE_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
+        endpoint_url=os.environ.get("STORAGE_ENDPOINT"),
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:

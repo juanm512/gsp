@@ -142,10 +142,10 @@ Si aún no tienes configurado Cloudflare R2:
 
 ```bash
 # .env
-S3_BUCKET="your-bucket-name"
-AWS_ACCESS_KEY_ID="your-r2-access-key"
-AWS_SECRET_ACCESS_KEY="your-r2-secret-key"
-S3_ENDPOINT_URL="https://your-account-id.r2.cloudflarestorage.com"
+STORAGE_BUCKET_NAME="your-bucket-name"
+STORAGE_ACCESS_KEY_ID="your-r2-access-key"
+STORAGE_SECRET_ACCESS_KEY="your-r2-secret-key"
+STORAGE_ENDPOINT="https://your-account-id.r2.cloudflarestorage.com"
 ```
 
 ### Paso 4: Deploy Modal Functions (GPU Workers)
@@ -157,12 +157,12 @@ pip install modal
 # 2. Setup Modal (crear cuenta y autenticar)
 modal setup
 
-# 3. Crear secret en Modal con credenciales de S3
-modal secret create aws-s3-credentials \
-  S3_BUCKET=your-bucket \
-  AWS_ACCESS_KEY_ID=your-r2-access-key \
-  AWS_SECRET_ACCESS_KEY=your-r2-secret-key \
-  S3_ENDPOINT_URL=https://your-account-id.r2.cloudflarestorage.com
+# 3. Crear secret en Modal con credenciales de storage
+modal secret create storage-credentials \
+  STORAGE_BUCKET_NAME=your-bucket \
+  STORAGE_ACCESS_KEY_ID=your-r2-access-key \
+  STORAGE_SECRET_ACCESS_KEY=your-r2-secret-key \
+  STORAGE_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 
 # 4. Deploy funciones Modal
 cd packages/processing/modal
@@ -207,10 +207,10 @@ Los CPU workers se deployean como servicios separados que corren 24/7.
 
 3. Agregar variables de entorno en Railway:
    - `REDIS_URL`
-   - `S3_BUCKET`
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
-   - `S3_ENDPOINT_URL`
+   - `STORAGE_BUCKET_NAME`
+   - `STORAGE_ACCESS_KEY_ID`
+   - `STORAGE_SECRET_ACCESS_KEY`
+   - `STORAGE_ENDPOINT`
    - `POSTGRES_URL` (tu Supabase URL)
 
 4. Crear `Dockerfile` para workers (Railway lo detectará automáticamente):
@@ -281,10 +281,10 @@ REDIS_URL="redis://default:xxx@xxx.upstash.io:6379"
 MODAL_COLMAP_URL="https://..."
 MODAL_BRUSH_URL="https://..."
 MODAL_TOKEN="..."
-S3_BUCKET="..."
-AWS_ACCESS_KEY_ID="..."
-AWS_SECRET_ACCESS_KEY="..."
-S3_ENDPOINT_URL="..."
+STORAGE_BUCKET_NAME="..."
+STORAGE_ACCESS_KEY_ID="..."
+STORAGE_SECRET_ACCESS_KEY="..."
+STORAGE_ENDPOINT="..."
 ```
 
 ### Paso 7: Verificar Deployment
@@ -412,11 +412,11 @@ docker logs <container-id>
 
 ```bash
 # Verificar variables de entorno
-echo $S3_BUCKET
+echo $STORAGE_BUCKET_NAME
 echo $REDIS_URL
 
 # Verificar conectividad a S3
-aws s3 ls s3://$S3_BUCKET
+aws s3 ls s3://$STORAGE_BUCKET_NAME
 
 # Verificar conectividad a Redis
 redis-cli -u $REDIS_URL PING

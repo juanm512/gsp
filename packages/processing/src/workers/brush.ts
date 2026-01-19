@@ -2,7 +2,7 @@ import { Worker, Job } from "bullmq";
 import { Redis } from "ioredis";
 import { db } from "@acme/db/client";
 import { processingStage } from "@acme/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from "@acme/db";
 
 interface BrushJobData {
   presentationId: string;
@@ -52,7 +52,7 @@ async function callModalBrush(jobData: BrushJobData): Promise<BrushResult> {
     throw new Error(`Modal Brush failed: ${error}`);
   }
 
-  return await response.json();
+  return (await response.json()) as BrushResult;
 }
 
 // Create worker

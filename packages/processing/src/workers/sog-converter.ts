@@ -4,7 +4,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { db } from "@acme/db/client";
 import { processingStage } from "@acme/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from "@acme/db";
 
 const execAsync = promisify(exec);
 
