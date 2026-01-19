@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, json, bigint, real, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, json, bigint, real, index, jsonb, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user, organization } from "./auth-schema";
 
@@ -93,7 +93,7 @@ export const presentation = pgTable("presentation", {
     currentStage: stageTypeEnum("current_stage"), // Current stage in the pipeline
 
     // Public access
-    isPublic: integer("is_public", { mode: "boolean" }).default(false).notNull(),
+    isPublic: boolean("is_public").default(false).notNull(),
     publicUrl: text("public_url"), // URL for public viewing
 
     // Rejection/failure info
