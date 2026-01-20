@@ -8,6 +8,7 @@ interface BrushJobData {
   presentationId: string;
   stageId: string;
   inputFileKey: string;
+  framesFileKey?: string; // Added: path to original frames ZIP
 }
 
 interface BrushResult {
@@ -72,8 +73,30 @@ const worker = new Worker<BrushJobData, BrushResult>(
         })
         .where(eq(processingStage.id, stageId));
 
-      // Call Modal function
-      const result = await callModalBrush(job.data);
+      // Get framesFileKey from COLMAP stage metadata
+      let framesFileKey = job.data.framesFileKey;
+      if (!framesFileKey) {
+        // Query the COLMAP stage to get framesFileKey from its metadata
+        const colmapStage = await db
+          .select()
+          .from(processingStage)
+          .where(eq(processingStage.presentationId, presentationId))
+          .then((stages) =>
+            stages.find((s) => s.stage === "COLMAP" && s.status === "COMPLETED")
+          );
+
+        if (colmapStage?.metadata && typeof colmapStage.metadata === "object") {
+          const metadata = colmapStage.metadata as Record<string, unknown>;
+          framesFileKey = metadata.framesFileKey as string | undefined;
+        }
+        console.log(`[Brush] Retrieved framesFileKey from COLMAP: ${framesFileKey}`);
+      }
+
+      // Call Modal function with framesFileKey
+      const result = await callModalBrush({
+        ...job.data,
+        framesFileKey,
+      });
 
       // Update stage with results
       await db
