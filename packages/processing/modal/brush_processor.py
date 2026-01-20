@@ -100,6 +100,14 @@ def train_gaussian_splatting(job_data: dict) -> dict:
             return prefixed_key
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        # Log all job data for debugging
+        print(f"=== BRUSH PROCESSOR JOB DATA ===")
+        print(f"  presentationId: {presentation_id}")
+        print(f"  stageId: {stage_id}")
+        print(f"  inputFileKey (COLMAP): {input_file_key}")
+        print(f"  framesFileKey: {frames_file_key}")
+        print(f"================================")
+        
         # Download COLMAP data
         colmap_zip_path = os.path.join(tmpdir, "colmap.zip")
         print(f"Downloading COLMAP data from S3: {input_file_key}")
@@ -115,15 +123,27 @@ def train_gaussian_splatting(job_data: dict) -> dict:
         if frames_file_key:
             frames_zip_path = os.path.join(tmpdir, "frames.zip")
             print(f"Downloading frames from S3: {frames_file_key}")
-            download_with_fallback(frames_file_key, frames_zip_path)
-            
-            # Extract frames into colmap_dir/images (Brush expects images in an "images" subdirectory)
-            images_dir = os.path.join(colmap_dir, "images")
-            os.makedirs(images_dir, exist_ok=True)
-            with zipfile.ZipFile(frames_zip_path, 'r') as zipf:
-                zipf.extractall(images_dir)
-            print(f"Extracted frames to: {images_dir}")
-            print(f"Images count: {len(os.listdir(images_dir))}")
+            try:
+                download_with_fallback(frames_file_key, frames_zip_path)
+                
+                # Extract frames into colmap_dir/images (Brush expects images in an "images" subdirectory)
+                images_dir = os.path.join(colmap_dir, "images")
+                os.makedirs(images_dir, exist_ok=True)
+                with zipfile.ZipFile(frames_zip_path, 'r') as zipf:
+                    zipf.extractall(images_dir)
+                print(f"Extracted frames to: {images_dir}")
+                
+                # List extracted files
+                all_files = []
+                for root, dirs, files in os.walk(images_dir):
+                    for f in files:
+                        all_files.append(os.path.relpath(os.path.join(root, f), images_dir))
+                print(f"Images extracted: {len(all_files)} files")
+                if all_files[:5]:
+                    print(f"Sample files: {all_files[:5]}")
+            except Exception as e:
+                print(f"ERROR downloading frames: {e}")
+                raise
         else:
             print("WARNING: No framesFileKey provided, Brush may fail to find images")
 

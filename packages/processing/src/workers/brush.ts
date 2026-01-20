@@ -73,23 +73,37 @@ const worker = new Worker<BrushJobData, BrushResult>(
         })
         .where(eq(processingStage.id, stageId));
 
-      // Get framesFileKey from COLMAP stage metadata
+      // Get framesFileKey from COLMAP stage metadata or EXTRACT_FRAMES output
       let framesFileKey = job.data.framesFileKey;
       if (!framesFileKey) {
-        // Query the COLMAP stage to get framesFileKey from its metadata
-        const colmapStage = await db
+        // Query all stages for this presentation
+        const stages = await db
           .select()
           .from(processingStage)
-          .where(eq(processingStage.presentationId, presentationId))
-          .then((stages) =>
-            stages.find((s) => s.stage === "COLMAP" && s.status === "COMPLETED")
-          );
+          .where(eq(processingStage.presentationId, presentationId));
 
+        console.log(`[Brush] Found ${stages.length} stages for presentation ${presentationId}`);
+
+        // First try: Get framesFileKey from COLMAP metadata
+        const colmapStage = stages.find((s) => s.stage === "COLMAP" && s.status === "COMPLETED");
         if (colmapStage?.metadata && typeof colmapStage.metadata === "object") {
           const metadata = colmapStage.metadata as Record<string, unknown>;
           framesFileKey = metadata.framesFileKey as string | undefined;
+          console.log(`[Brush] COLMAP metadata: ${JSON.stringify(colmapStage.metadata)}`);
         }
-        console.log(`[Brush] Retrieved framesFileKey from COLMAP: ${framesFileKey}`);
+
+        // Fallback: Get outputFileKey from EXTRACT_FRAMES stage
+        if (!framesFileKey) {
+          const extractFramesStage = stages.find(
+            (s) => s.stage === "EXTRACT_FRAMES" && s.status === "COMPLETED"
+          );
+          if (extractFramesStage?.outputFileKey) {
+            framesFileKey = extractFramesStage.outputFileKey;
+            console.log(`[Brush] Using EXTRACT_FRAMES outputFileKey: ${framesFileKey}`);
+          }
+        }
+
+        console.log(`[Brush] Final framesFileKey: ${framesFileKey}`);
       }
 
       // Call Modal function with framesFileKey
