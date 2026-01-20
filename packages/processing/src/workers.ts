@@ -10,6 +10,10 @@
  *   - Multiple workers: WORKER_TYPE=frame-extractor,image-validator npm start
  */
 
+// Force IPv4 connections (fixes ENETUNREACH errors on some platforms)
+import dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
+
 const WORKER_TYPE = process.env.WORKER_TYPE;
 
 async function startWorkers() {
