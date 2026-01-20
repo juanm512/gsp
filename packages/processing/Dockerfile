@@ -12,11 +12,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip3 install --no-cache-dir \
-    boto3==1.34.* \
-    opencv-python-headless==4.9.* \
-    pillow==10.2.* \
-    numpy==1.26.*
+RUN pip3 install --no-cache-dir --break-system-packages \
+    boto3 \
+    opencv-python-headless \
+    pillow \
+    numpy
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
