@@ -12,8 +12,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-# Create Modal stub
-stub = modal.Stub("brush-processor")
+# Create Modal app
+app = modal.App("brush-processor")
 
 # Create image with Brush and dependencies
 # Based on Brush's official Dockerfile
@@ -47,16 +47,18 @@ brush_image = (
         "numpy==1.26.*",
         "boto3==1.34.*",
         "plyfile==1.0.*",
+        "fastapi",
     ])
 )
 
-@stub.function(
+@app.function(
     image=brush_image,
     gpu="A10G",  # A10G for more VRAM needed for training
     timeout=7200,  # 2 hours timeout
     memory=49152,  # 48 GB RAM
     secrets=[modal.Secret.from_name("storage-credentials")],
 )
+@modal.fastapi_endpoint(method="POST")
 def train_gaussian_splatting(job_data: dict) -> dict:
     """
     Train Gaussian Splatting model using Brush
@@ -146,7 +148,7 @@ def train_gaussian_splatting(job_data: dict) -> dict:
             }
         }
 
-@stub.local_entrypoint()
+@app.local_entrypoint()
 def main():
     """Local entrypoint for testing"""
     job_data = {

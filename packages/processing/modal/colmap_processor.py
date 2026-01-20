@@ -10,23 +10,24 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-# Create Modal stub
-stub = modal.Stub("colmap-processor")
+# Create Modal app
+app = modal.App("colmap-processor")
 
 # Create image with COLMAP installed
 colmap_image = (
-    modal.Image.from_registry("colmap/colmap:3.9.1", add_python="3.11")
+    modal.Image.from_registry("colmap/colmap:latest", add_python="3.11")
     .apt_install(["git", "wget"])
-    .pip_install(["boto3==1.34.*"])
+    .pip_install(["boto3==1.34.*", "fastapi"])
 )
 
-@stub.function(
+@app.function(
     image=colmap_image,
     gpu="T4",  # T4 is sufficient for COLMAP
     timeout=3600,  # 1 hour timeout
     memory=32768,  # 32 GB RAM
     secrets=[modal.Secret.from_name("storage-credentials")],
 )
+@modal.fastapi_endpoint(method="POST")
 def run_colmap(job_data: dict) -> dict:
     """
     Run COLMAP on images from S3
@@ -131,7 +132,7 @@ def run_colmap(job_data: dict) -> dict:
             }
         }
 
-@stub.local_entrypoint()
+@app.local_entrypoint()
 def main():
     """Local entrypoint for testing"""
     # Example job data

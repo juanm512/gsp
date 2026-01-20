@@ -53,3 +53,5 @@ dist/
 
 # tanstack
 .tanstack
+packages/processing/modal/__pycache__/brush_processor.cpython-314.pyc
+packages/processing/modal/__pycache__/colmap_processor.cpython-314.pyc
