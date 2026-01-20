@@ -8,6 +8,9 @@ const { Pool } = pg;
 // Use connection pool for better performance
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
+  ssl: {
+    rejectUnauthorized: false, // Required for Supabase pooler
+  },
 });
 
 export const db = drizzle({
