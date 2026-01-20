@@ -29,7 +29,7 @@ COPY packages/db ./packages/db
 COPY tooling ./tooling
 
 # Install Node dependencies
-RUN npm install -g pnpm
+RUN npm install -g pnpm tsx
 RUN pnpm install --frozen-lockfile
 
 # Build packages
