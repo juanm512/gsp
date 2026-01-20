@@ -1,4 +1,4 @@
-import { eq, and, asc } from "@acme/db";
+import { eq, and, asc, desc } from "@acme/db";
 
 /**
  * Triggers the next pending stage in the pipeline for a presentation
@@ -8,6 +8,15 @@ export async function triggerNextStage(
   presentationId: string,
 ): Promise<void> {
   const { processingStage, presentation } = await import("@acme/db/schema");
+
+  // Get the last completed stage to get its output as input for the next stage
+  const lastCompletedStage = await db.query.processingStage.findFirst({
+    where: and(
+      eq(processingStage.presentationId, presentationId),
+      eq(processingStage.status, "COMPLETED"),
+    ),
+    orderBy: [desc(processingStage.order)],
+  });
 
   // Get next pending stage ordered by order field
   const nextStage = await db.query.processingStage.findFirst({
@@ -25,6 +34,17 @@ export async function triggerNextStage(
       .set({ status: "completed" })
       .where(eq(presentation.id, presentationId));
     return;
+  }
+
+  // If the next stage doesn't have an inputFileKey, set it from the previous stage's output
+  if (!nextStage.inputFileKey && lastCompletedStage?.outputFileKey) {
+    await db
+      .update(processingStage)
+      .set({ inputFileKey: lastCompletedStage.outputFileKey })
+      .where(eq(processingStage.id, nextStage.id));
+
+    // Update local reference
+    nextStage.inputFileKey = lastCompletedStage.outputFileKey;
   }
 
   // Update presentation with current stage

@@ -359,7 +359,8 @@ export const presentationRouter = {
             await createPipelineStages(
                 ctx.db,
                 existingUpload.presentationId,
-                existingUpload.type
+                existingUpload.type,
+                existingUpload.fileKey,
             );
 
             // Trigger the first stage

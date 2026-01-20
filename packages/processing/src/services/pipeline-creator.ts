@@ -59,6 +59,7 @@ export async function createPipelineStages(
   db: any,
   presentationId: string,
   uploadType: UploadType,
+  inputFileKey: string,
 ): Promise<void> {
   const { processingStage, presentation } = await import("@acme/db/schema");
 
@@ -68,13 +69,15 @@ export async function createPipelineStages(
     throw new Error(`Invalid upload type: ${uploadType}`);
   }
 
-  const stageRecords = stages.map((stage) => ({
+  const stageRecords = stages.map((stage, index) => ({
     presentationId,
     stage: stage.stage as any,
     mode: stage.mode as any,
     order: stage.order,
     status: "PENDING" as const,
     processingType: stage.processingType as any,
+    // First stage gets the uploaded file key, subsequent stages get input from previous stage's output
+    inputFileKey: index === 0 ? inputFileKey : undefined,
   }));
 
   await db.insert(processingStage).values(stageRecords);
