@@ -62,7 +62,28 @@ const worker = new Worker<SogConverterJobData, SogConverterResult>(
         },
       );
 
-      const result: SogConverterResult = JSON.parse(stdout);
+      // Parse stdout line by line, find the result line
+      const lines = stdout.trim().split('\n');
+      let result: SogConverterResult | null = null;
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.type === 'log') {
+            console.log(`[SogConverter] ${parsed.title}`, parsed.data || '');
+          } else if (parsed.type === 'result') {
+            result = parsed as SogConverterResult;
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.error);
+          }
+        } catch (e) {
+          console.log(`[SogConverter] ${line}`);
+        }
+      }
+
+      if (!result) {
+        throw new Error('No result found in Python script output');
+      }
 
       // Update stage with results
       await db

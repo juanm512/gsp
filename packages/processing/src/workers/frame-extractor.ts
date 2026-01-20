@@ -73,7 +73,29 @@ const worker = new Worker<FrameExtractorJobData, FrameExtractorResult>(
         },
       );
 
-      const result: FrameExtractorResult = JSON.parse(stdout);
+      // Parse stdout line by line, find the result line
+      const lines = stdout.trim().split('\n');
+      let result: FrameExtractorResult | null = null;
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.type === 'log') {
+            console.log(`[FrameExtractor] ${parsed.title}`, parsed.data || '');
+          } else if (parsed.type === 'result') {
+            result = parsed as FrameExtractorResult;
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.error);
+          }
+        } catch (e) {
+          // Skip non-JSON lines
+          console.log(`[FrameExtractor] ${line}`);
+        }
+      }
+
+      if (!result) {
+        throw new Error('No result found in Python script output');
+      }
 
       // Update stage with results
       await db

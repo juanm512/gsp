@@ -63,7 +63,28 @@ const worker = new Worker<ImageValidatorJobData, ImageValidatorResult>(
         },
       );
 
-      const result: ImageValidatorResult = JSON.parse(stdout);
+      // Parse stdout line by line, find the result line
+      const lines = stdout.trim().split('\n');
+      let result: ImageValidatorResult | null = null;
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.type === 'log') {
+            console.log(`[ImageValidator] ${parsed.title}`, parsed.data || '');
+          } else if (parsed.type === 'result') {
+            result = parsed as ImageValidatorResult;
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.error);
+          }
+        } catch (e) {
+          console.log(`[ImageValidator] ${line}`);
+        }
+      }
+
+      if (!result) {
+        throw new Error('No result found in Python script output');
+      }
 
       // Update stage with results
       await db

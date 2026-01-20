@@ -13,25 +13,19 @@ import zipfile
 from pathlib import Path
 import boto3
 
+
+def log(title: str, data: dict = None):
+    """Print a JSON log entry"""
+    entry = {"type": "log", "title": title}
+    if data:
+        entry["data"] = data
+    print(json.dumps(entry))
+
+
 def extract_frames(video_path: str, output_dir: str, fps: int = 2) -> int:
-    """
-    Extract frames from video using FFmpeg
-
-    Args:
-        video_path: Path to input video file
-        output_dir: Directory to save extracted frames
-        fps: Frames per second to extract (default: 2)
-
-    Returns:
-        Number of frames extracted
-    """
-    # Create output directory
+    """Extract frames from video using FFmpeg"""
     os.makedirs(output_dir, exist_ok=True)
 
-    # Extract frames using FFmpeg with memory-optimized settings
-    # -vf fps={fps},scale=w=1280:h=-1 - Extract {fps} fps, max width 1280
-    # -qscale:v 4 - Lower quality to reduce memory/CPU
-    # -threads 1 - Single thread to limit memory
     output_pattern = os.path.join(output_dir, "frame_%06d.jpg")
 
     cmd = [
@@ -40,23 +34,18 @@ def extract_frames(video_path: str, output_dir: str, fps: int = 2) -> int:
         "-vf", f"fps={fps},scale=w=1280:h=-1:force_original_aspect_ratio=decrease",
         "-qscale:v", "4",
         "-threads", "1",
-        "-an",  # No audio
+        "-an",
         output_pattern
     ]
 
     subprocess.run(cmd, check=True, capture_output=True)
 
-    # Count extracted frames
     frames = list(Path(output_dir).glob("frame_*.jpg"))
     return len(frames)
 
-def create_zip(source_dir: str, output_zip: str) -> int:
-    """
-    Create ZIP file from directory
 
-    Returns:
-        Size of ZIP file in bytes
-    """
+def create_zip(source_dir: str, output_zip: str) -> int:
+    """Create ZIP file from directory"""
     with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(source_dir):
             for file in files:
@@ -66,9 +55,9 @@ def create_zip(source_dir: str, output_zip: str) -> int:
 
     return os.path.getsize(output_zip)
 
+
 def main():
     """Main processor function"""
-    # Get job data from stdin or environment
     job_data_str = os.environ.get("JOB_DATA") or sys.stdin.read()
     job_data = json.loads(job_data_str)
 
@@ -76,7 +65,6 @@ def main():
     stage_id = job_data["stageId"]
     input_file_key = job_data["inputFileKey"]
 
-    # Storage configuration
     s3_bucket = os.environ["STORAGE_BUCKET_NAME"]
     s3_client = boto3.client(
         "s3",
@@ -85,32 +73,32 @@ def main():
         endpoint_url=os.environ.get("STORAGE_ENDPOINT"),
     )
 
-    # Create temporary directory
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Download video from S3
+        # Download video
         video_path = os.path.join(tmpdir, "input_video.mp4")
-        print(f"Downloading video from S3: {input_file_key}")
+        log("Downloading video", {"key": input_file_key})
         s3_client.download_file(s3_bucket, input_file_key, video_path)
 
         # Extract frames
         frames_dir = os.path.join(tmpdir, "frames")
-        print("Extracting frames from video...")
+        log("Extracting frames")
         frame_count = extract_frames(video_path, frames_dir, fps=2)
-        print(f"Extracted {frame_count} frames")
+        log("Frames extracted", {"count": frame_count})
 
-        # Create ZIP file
+        # Create ZIP
         zip_path = os.path.join(tmpdir, "frames.zip")
-        print("Creating ZIP file...")
+        log("Creating ZIP")
         zip_size = create_zip(frames_dir, zip_path)
-        print(f"Created ZIP file: {zip_size / 1024 / 1024:.2f} MB")
+        log("ZIP created", {"size_mb": round(zip_size / 1024 / 1024, 2)})
 
-        # Upload ZIP to S3
+        # Upload
         output_key = f"processed/{presentation_id}/frames_{stage_id}.zip"
-        print(f"Uploading ZIP to S3: {output_key}")
+        log("Uploading to S3", {"key": output_key})
         s3_client.upload_file(zip_path, s3_bucket, output_key)
 
-        # Output result as JSON
+        # Final result
         result = {
+            "type": "result",
             "outputKey": output_key,
             "outputSize": zip_size,
             "metadata": {
@@ -120,9 +108,10 @@ def main():
         }
         print(json.dumps(result))
 
+
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        print(json.dumps({"type": "error", "error": str(e)}))
         sys.exit(1)
