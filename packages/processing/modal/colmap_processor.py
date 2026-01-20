@@ -52,6 +52,7 @@ def run_colmap(job_data: dict) -> dict:
         aws_access_key_id=os.environ.get("STORAGE_ACCESS_KEY_ID"),
         aws_secret_access_key=os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
         endpoint_url=os.environ.get("STORAGE_ENDPOINT"),
+        region_name=os.environ.get("STORAGE_REGION", "auto"),
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
