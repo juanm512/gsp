@@ -114,7 +114,10 @@ const worker = new Worker<FrameExtractorJobData, FrameExtractorResult>(
   },
   {
     connection,
-    concurrency: 2, // Process 2 jobs at a time
+    concurrency: 1, // Process 1 job at a time to limit memory usage
+    lockDuration: 300000, // 5 minutes lock
+    stalledInterval: 60000, // Check for stalled jobs every 60s
+    maxStalledCount: 3, // Allow 3 stall checks before failing
   },
 );
 

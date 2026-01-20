@@ -103,7 +103,10 @@ const worker = new Worker<SogConverterJobData, SogConverterResult>(
   },
   {
     connection,
-    concurrency: 2,
+    concurrency: 1,
+    lockDuration: 300000,
+    stalledInterval: 60000,
+    maxStalledCount: 3,
   },
 );
 

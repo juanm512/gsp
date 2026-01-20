@@ -28,16 +28,19 @@ def extract_frames(video_path: str, output_dir: str, fps: int = 2) -> int:
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
 
-    # Extract frames using FFmpeg
-    # -vf fps={fps} - Extract {fps} frames per second
-    # -qscale:v 2 - High quality
+    # Extract frames using FFmpeg with memory-optimized settings
+    # -vf fps={fps},scale=w=1280:h=-1 - Extract {fps} fps, max width 1280
+    # -qscale:v 4 - Lower quality to reduce memory/CPU
+    # -threads 1 - Single thread to limit memory
     output_pattern = os.path.join(output_dir, "frame_%06d.jpg")
 
     cmd = [
         "ffmpeg",
         "-i", video_path,
-        "-vf", f"fps={fps}",
-        "-qscale:v", "2",
+        "-vf", f"fps={fps},scale=w=1280:h=-1:force_original_aspect_ratio=decrease",
+        "-qscale:v", "4",
+        "-threads", "1",
+        "-an",  # No audio
         output_pattern
     ]
 
