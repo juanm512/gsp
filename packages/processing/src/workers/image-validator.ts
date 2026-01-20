@@ -50,8 +50,10 @@ const worker = new Worker<ImageValidatorJobData, ImageValidatorResult>(
       const jobDataJson = JSON.stringify(job.data);
 
       // Run Python script
+      const scriptPath = `${process.cwd()}/docker/image-validator/validate_images.py`;
+      console.log(`[ImageValidator] Running script at: ${scriptPath}`);
       const { stdout } = await execAsync(
-        `python3 ${process.cwd()}/packages/processing/docker/image-validator/validate_images.py`,
+        `python3 ${scriptPath}`,
         {
           env: {
             ...process.env,

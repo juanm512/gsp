@@ -59,8 +59,11 @@ const worker = new Worker<FrameExtractorJobData, FrameExtractorResult>(
       // });
 
       // Option 2: Run Python script directly (requires Python + dependencies)
+      // Use path relative to the processing package root
+      const scriptPath = `${process.cwd()}/docker/frame-extractor/frame_extractor.py`;
+      console.log(`[FrameExtractor] Running script at: ${scriptPath}`);
       const { stdout } = await execAsync(
-        `python3 ${process.cwd()}/packages/processing/docker/frame-extractor/frame_extractor.py`,
+        `python3 ${scriptPath}`,
         {
           env: {
             ...process.env,

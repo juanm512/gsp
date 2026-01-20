@@ -49,8 +49,10 @@ const worker = new Worker<SogConverterJobData, SogConverterResult>(
       const jobDataJson = JSON.stringify(job.data);
 
       // Run Python script
+      const scriptPath = `${process.cwd()}/docker/sog-converter/convert_sog.py`;
+      console.log(`[SogConverter] Running script at: ${scriptPath}`);
       const { stdout } = await execAsync(
-        `python3 ${process.cwd()}/packages/processing/docker/sog-converter/convert_sog.py`,
+        `python3 ${scriptPath}`,
         {
           env: {
             ...process.env,
