@@ -17,23 +17,31 @@ app = modal.App("brush-processor")
 
 # Create image with Brush and dependencies
 # Based on Brush's official Dockerfile: https://github.com/ArthurBrussee/brush/blob/main/extras/Dockerfile
-# Note: Brush requires Rust 1.89+, so we use the latest image
+# Note: We switch to nvidia/cuda base to ensure proper GPU drivers/bootstrapping, and install Rust manually
 brush_image = (
-    modal.Image.from_registry("rustlang/rust:nightly", add_python="3.11")
-    # Clone and build Brush first (while we have Rust)
-    .run_commands(
-        "git clone https://github.com/ArthurBrussee/brush.git /brush",
-        "cargo build --release --manifest-path /brush/Cargo.toml",
-    )
-    # Install Vulkan and GPU drivers (as per official Dockerfile)
+    modal.Image.from_registry("nvidia/opengl:1.0-glvnd-devel-ubuntu22.04", add_python="3.11")
+    # Install dependencies
     .apt_install([
         "build-essential",
+        "curl",
+        "git",
         "cmake",
         "libvulkan1",
         "vulkan-tools",
-        "mesa-vulkan-drivers",
-        # Note: nvidia-driver-570 is provided by Modal's GPU runtime
+        "pkg-config",
+        "libssl-dev",
     ])
+    # Install Rust (nightly required for Brush 1.89+ logic, though official docker uses 1.86, we stick to recent)
+    .run_commands(
+        "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly",
+        "echo 'source $HOME/.cargo/env' >> $HOME/.bashrc",
+    )
+    # Clone and build Brush
+    # We use full path to cargo to avoid shell issues with 'source'
+    .run_commands(
+        "git clone https://github.com/ArthurBrussee/brush.git /brush",
+        "$HOME/.cargo/bin/cargo build --release --manifest-path /brush/Cargo.toml",
+    )
     # Install Python dependencies for our script
     .pip_install([
         "boto3==1.34.*",
@@ -180,9 +188,28 @@ def train_gaussian_splatting(job_data: dict) -> dict:
         print(f"Brush command: {' '.join(brush_cmd)}")
         
         # Set environment for headless GPU
+        # The nvidia/opengl image should handle the driver libs via glvnd
         env = os.environ.copy()
-        env["DISPLAY"] = ""  # Force headless mode
+        env["DISPLAY"] = ""
+        env["NVIDIA_DRIVER_CAPABILITIES"] = "all"
+        env["NVIDIA_VISIBLE_DEVICES"] = "all"
         
+        # DEBUG: Check Vulkan status
+        print("Checking Vulkan status...")
+        try:
+            print("--- /etc/vulkan/icd.d ---")
+            subprocess.run(["ls", "-R", "/etc/vulkan"], check=False)
+            print("--- /usr/share/vulkan/icd.d ---")
+            subprocess.run(["ls", "-R", "/usr/share/vulkan"], check=False)
+            print("--- NVIDIA Libraries ---")
+            subprocess.run(["find", "/usr", "-name", "lib*nvidia*"], check=False)
+            
+            subprocess.run(["nvidia-smi"], check=False, env=env)
+            subprocess.run(["vulkaninfo", "--summary"], check=False, env=env)
+        except Exception as e:
+            print(f"Vulkan check failed: {e}")
+            
+        print(f"Brush command: {' '.join(brush_cmd)}")
         subprocess.run(brush_cmd, check=True, env=env)
 
         # Find output PLY file (Brush saves as point_cloud.ply)

@@ -152,6 +152,11 @@ const worker = new Worker<BrushJobData, BrushResult>(
   {
     connection,
     concurrency: 1, // GPU jobs are expensive, process one at a time
+    // Prevent retry loops from hammering Redis
+    limiter: {
+      max: 1,
+      duration: 60000, // Max 1 job per minute when failing
+    },
   },
 );
 

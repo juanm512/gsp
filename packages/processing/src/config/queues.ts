@@ -47,7 +47,7 @@ export const colmapQueue = new Queue("colmap", {
     attempts: 2, // GPU jobs are expensive, fewer retries
     backoff: {
       type: "exponential",
-      delay: 5000,
+      delay: 60000, // 60 seconds initial delay, doubles each retry
     },
     removeOnComplete: {
       count: 100,
@@ -64,7 +64,7 @@ export const brushTrainingQueue = new Queue("brush-training", {
     attempts: 2, // GPU jobs are expensive, fewer retries
     backoff: {
       type: "exponential",
-      delay: 5000,
+      delay: 60000, // 60 seconds initial delay, doubles each retry
     },
     removeOnComplete: {
       count: 100,
