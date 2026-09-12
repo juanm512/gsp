@@ -4,9 +4,10 @@ import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, count, isNull } from "@acme/db";
 import { storage, getMimeType, sanitizeFilename } from "@acme/storage";
+import { createPipelineStages, triggerNextStage } from "@acme/processing";
 
 import { protectedProcedure, adminProcedure } from "../trpc";
-import { presentation, upload, processedFile, organization } from "@acme/db/schema";
+import { presentation, upload, processedFile, organization, member } from "@acme/db/schema";
 import { canCreatePresentation } from "@acme/billing/limits";
 
 // ============================================
@@ -38,6 +39,61 @@ const initiateUploadInput = z.object({
 });
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Verifies that a user is a member of an organization
+ * @throws TRPCError with code FORBIDDEN if user is not a member
+ */
+async function verifyOrganizationMembership(
+    db: any,
+    userId: string,
+    organizationId: string
+): Promise<void> {
+    const userMember = await db.query.member.findFirst({
+        where: and(
+            eq(member.userId, userId),
+            eq(member.organizationId, organizationId)
+        ),
+    });
+
+    if (!userMember) {
+        throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "No tienes acceso a esta organización",
+        });
+    }
+}
+
+/**
+ * Verifies that a user owns or has access to a presentation
+ * @throws TRPCError with code NOT_FOUND or FORBIDDEN
+ * @returns The presentation with organizationId
+ */
+async function verifyPresentationAccess(
+    db: any,
+    userId: string,
+    presentationId: string
+): Promise<{ organizationId: string }> {
+    const pres = await db.query.presentation.findFirst({
+        where: eq(presentation.id, presentationId),
+        columns: { organizationId: true },
+    });
+
+    if (!pres) {
+        throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Presentation not found",
+        });
+    }
+
+    await verifyOrganizationMembership(db, userId, pres.organizationId);
+
+    return pres;
+}
+
+// ============================================
 // ROUTER
 // ============================================
 
@@ -53,6 +109,9 @@ export const presentationRouter = {
         .input(listPresentationsInput)
         .query(async ({ ctx, input }) => {
             const { organizationId, limit, offset, status } = input;
+
+            // Verify user is member of the organization
+            await verifyOrganizationMembership(ctx.db, ctx.session.user.id, organizationId);
 
             const conditions = [eq(presentation.organizationId, organizationId)];
             if (status) {
@@ -88,6 +147,9 @@ export const presentationRouter = {
     getById: protectedProcedure
         .input(z.object({ presentationId: z.string() }))
         .query(async ({ ctx, input }) => {
+            // Verify user has access to this presentation
+            await verifyPresentationAccess(ctx.db, ctx.session.user.id, input.presentationId);
+
             const result = await ctx.db.query.presentation.findFirst({
                 where: eq(presentation.id, input.presentationId),
                 with: {
@@ -123,6 +185,9 @@ export const presentationRouter = {
         .mutation(async ({ ctx, input }) => {
             const { organizationId, title, description, latitude, longitude, address } = input;
 
+            // Verify user is member of the organization
+            await verifyOrganizationMembership(ctx.db, ctx.session.user.id, organizationId);
+
             const org = await ctx.db.query.organization.findFirst({
                 where: eq(organization.id, organizationId),
             });
@@ -137,7 +202,7 @@ export const presentationRouter = {
                 .where(eq(presentation.organizationId, organizationId));
 
             const currentCount = countResult?.count ?? 0;
-            const plan = (org as any).plan || "free";
+            const plan = org.plan || "free";
             const { allowed, limit, remaining } = canCreatePresentation(currentCount, plan);
 
             if (!allowed) {
@@ -182,6 +247,9 @@ export const presentationRouter = {
         .mutation(async ({ ctx, input }) => {
             const { presentationId, ...updates } = input;
 
+            // Verify user has access to this presentation
+            await verifyPresentationAccess(ctx.db, ctx.session.user.id, presentationId);
+
             const [updated] = await ctx.db
                 .update(presentation)
                 .set(updates)
@@ -197,6 +265,9 @@ export const presentationRouter = {
     delete: protectedProcedure
         .input(z.object({ presentationId: z.string() }))
         .mutation(async ({ ctx, input }) => {
+            // Verify user has access to this presentation
+            await verifyPresentationAccess(ctx.db, ctx.session.user.id, input.presentationId);
+
             await ctx.db
                 .delete(presentation)
                 .where(eq(presentation.id, input.presentationId));
@@ -212,14 +283,8 @@ export const presentationRouter = {
         .mutation(async ({ ctx, input }) => {
             const { presentationId, fileName, fileSize, mimeType, uploadType } = input;
 
-            const pres = await ctx.db.query.presentation.findFirst({
-                where: eq(presentation.id, presentationId),
-                columns: { organizationId: true },
-            });
-
-            if (!pres) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Presentation not found" });
-            }
+            // Verify user has access to this presentation
+            const pres = await verifyPresentationAccess(ctx.db, ctx.session.user.id, presentationId);
 
             const uuid = randomUUID().slice(0, 8);
             const sanitizedName = sanitizeFilename(fileName);
@@ -272,18 +337,34 @@ export const presentationRouter = {
                 throw new TRPCError({ code: "NOT_FOUND", message: "Upload not found" });
             }
 
+            // Verify user has access to the presentation this upload belongs to
+            await verifyPresentationAccess(ctx.db, ctx.session.user.id, existingUpload.presentationId);
+
             const exists = await storage.exists(existingUpload.fileKey);
             if (!exists) {
                 throw new TRPCError({ code: "BAD_REQUEST", message: "File not found in storage." });
             }
 
-            // No upload status to update
-
-            // Update presentation status to pending_review
+            // Update presentation with upload info and set to processing
             await ctx.db
                 .update(presentation)
-                .set({ status: "pending_review" })
+                .set({
+                    status: "processing",
+                    uploadFileKey: existingUpload.fileKey,
+                    uploadFileSize: existingUpload.fileSize,
+                })
                 .where(eq(presentation.id, existingUpload.presentationId));
+
+            // Create pipeline stages based on upload type
+            await createPipelineStages(
+                ctx.db,
+                existingUpload.presentationId,
+                existingUpload.type,
+                existingUpload.fileKey,
+            );
+
+            // Trigger the first stage
+            await triggerNextStage(ctx.db, existingUpload.presentationId);
 
             return { success: true, upload: existingUpload };
         }),

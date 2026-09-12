@@ -10,6 +10,9 @@
     "build": "tsc",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc",
+    "start": "tsx src/workers.ts",
+    "start:cpu": "WORKER_TYPE=frame-extractor,image-validator,sog-converter tsx src/workers.ts",
+    "start:gpu": "WORKER_TYPE=colmap,brush tsx src/workers.ts",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
@@ -24,6 +27,7 @@
   },
   "prettier": "@acme/prettier-config",
   "dependencies": {
+    "@acme/db": "workspace:*",
     "bullmq": "^5.66.5",
     "ioredis": "^5.9.1"
   }

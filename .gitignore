@@ -45,3 +45,6 @@ dist/
 # turbo
 .turbo
 
+# python
+__pycache__/
+*.pyc

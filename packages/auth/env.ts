@@ -9,6 +9,11 @@ export function authEnv() {
           ? z.string().min(1)
           : z.string().min(1).optional(),
       RESEND_API_KEY: z.string().min(1),
+      EMAIL_TEST_MODE: z
+        .enum(["true", "false"])
+        .optional()
+        .transform((val) => val === "true"),
+      VERIFIED_EMAIL_DOMAIN: z.string().optional(),
       // Google OAuth (uncomment when ready)
       // AUTH_GOOGLE_ID: z.string().min(1).optional(),
       // AUTH_GOOGLE_SECRET: z.string().min(1).optional(),

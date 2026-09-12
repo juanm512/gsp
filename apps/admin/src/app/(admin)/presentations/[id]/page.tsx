@@ -28,6 +28,13 @@ import {
     Trash,
     X,
     StarOff,
+    Play,
+    RotateCcw,
+    SkipForward,
+    Ban,
+    Settings,
+    ArrowRight,
+    Zap,
 } from "lucide-react";
 
 
@@ -79,6 +86,26 @@ const statusConfig = {
     processing: { label: "Procesando", color: "bg-purple-500", icon: Loader2 },
     completed: { label: "Completado", color: "bg-green-500", icon: CheckCircle },
     failed: { label: "Fallido", color: "bg-red-500", icon: AlertCircle },
+};
+
+const stageStatusConfig = {
+    PENDING: { label: "Pendiente", color: "bg-slate-600 text-slate-200", icon: Clock },
+    IN_PROGRESS: { label: "En Progreso", color: "bg-blue-600 text-white", icon: Loader2 },
+    COMPLETED: { label: "Completado", color: "bg-green-600 text-white", icon: CheckCircle },
+    FAILED: { label: "Fallido", color: "bg-red-600 text-white", icon: XCircle },
+    SKIPPED: { label: "Omitido", color: "bg-yellow-600 text-white", icon: SkipForward },
+    CANCELLED: { label: "Cancelado", color: "bg-orange-600 text-white", icon: Ban },
+};
+
+const stageTypeLabels: Record<string, string> = {
+    EXTRACT_FRAMES: "Extraer Frames",
+    VALIDATE_OVERLAP: "Validar Solapamiento",
+    COLMAP: "COLMAP",
+    BRUSH_TRAINING: "Entrenamiento Brush",
+    OPTIMIZE_PLY: "Optimizar PLY",
+    CONVERT_SOG: "Convertir a SOG",
+    VALIDATE_SOG: "Validar SOG",
+    ADMIN_APPROVAL: "Aprobación Admin",
 };
 
 const processedFileTypes = [
@@ -133,6 +160,10 @@ export default function AdminPresentationDetailPage() {
         trpc.presentation.adminGetById.queryOptions({ presentationId })
     );
 
+    const { data: stages } = useQuery(
+        trpc.pipeline.getStages.queryOptions({ presentationId })
+    );
+
     const claimMutation = useMutation(
         trpc.presentation.adminClaim.mutationOptions({
             onSuccess: () => queryClient.invalidateQueries({ queryKey: [["presentation"]] }),
@@ -184,6 +215,51 @@ export default function AdminPresentationDetailPage() {
 
     const downloadMutation = useMutation(
         trpc.presentation.adminGetDownloadUrl.mutationOptions()
+    );
+
+    // Pipeline mutations
+    const completeStageMutation = useMutation(
+        trpc.pipeline.completeStage.mutationOptions({
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: [["pipeline"]] });
+                queryClient.invalidateQueries({ queryKey: [["presentation"]] });
+            },
+        })
+    );
+
+    const retryStageMutation = useMutation(
+        trpc.pipeline.retryStage.mutationOptions({
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: [["pipeline"]] });
+                queryClient.invalidateQueries({ queryKey: [["presentation"]] });
+            },
+        })
+    );
+
+    const skipStageMutation = useMutation(
+        trpc.pipeline.skipStage.mutationOptions({
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: [["pipeline"]] });
+                queryClient.invalidateQueries({ queryKey: [["presentation"]] });
+            },
+        })
+    );
+
+    const cancelStageMutation = useMutation(
+        trpc.pipeline.cancelStage.mutationOptions({
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: [["pipeline"]] });
+                queryClient.invalidateQueries({ queryKey: [["presentation"]] });
+            },
+        })
+    );
+
+    const changeStageModeMutation = useMutation(
+        trpc.pipeline.changeStageMode.mutationOptions({
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: [["pipeline"]] });
+            },
+        })
     );
 
     useEffect(() => {
@@ -378,6 +454,10 @@ export default function AdminPresentationDetailPage() {
                         <TabsList className="bg-slate-800 border-slate-700">
                             <TabsTrigger value="files">Archivos</TabsTrigger>
                             <TabsTrigger value="visualizer">Visualizador</TabsTrigger>
+                            <TabsTrigger value="pipeline">
+                                <Zap className="h-4 w-4 mr-2" />
+                                Pipeline
+                            </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="visualizer" className="mt-4">
@@ -583,6 +663,208 @@ export default function AdminPresentationDetailPage() {
                                             </Button>
                                         )}
                                     </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="pipeline" className="mt-4">
+                            <Card className="border-slate-800 bg-slate-800/50">
+                                <CardHeader>
+                                    <CardTitle className="text-white">Pipeline de Procesamiento</CardTitle>
+                                    <CardDescription className="text-slate-400">
+                                        Etapas de procesamiento para esta presentación
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {stages && stages.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {stages.map((stage: any, index: number) => {
+                                                const statusInfo = stageStatusConfig[stage.status as keyof typeof stageStatusConfig];
+                                                const StatusIcon = statusInfo?.icon || Clock;
+                                                const stageLabel = stageTypeLabels[stage.stage] || stage.stage;
+                                                const isManual = stage.mode === "MANUAL";
+                                                const canRetry = stage.status === "FAILED";
+                                                const canSkip = stage.status === "PENDING" || stage.status === "FAILED";
+                                                const canCancel = stage.status === "IN_PROGRESS";
+                                                const canComplete = stage.status === "PENDING" && isManual;
+
+                                                return (
+                                                    <Card key={stage.id} className="border-slate-700 bg-slate-900/50">
+                                                        <div className="p-4">
+                                                            {/* Header */}
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700 text-slate-300 font-semibold text-sm">
+                                                                        {stage.order}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <h4 className="font-medium text-white">{stageLabel}</h4>
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className={`text-xs ${isManual ? "border-orange-600 text-orange-400" : "border-blue-600 text-blue-400"}`}
+                                                                            >
+                                                                                {isManual ? "Manual" : "Auto"}
+                                                                            </Badge>
+                                                                            {stage.processingType && (
+                                                                                <Badge variant="outline" className="text-xs border-purple-600 text-purple-400">
+                                                                                    {stage.processingType}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                        <Badge className={`mt-1 ${statusInfo?.color}`}>
+                                                                            <StatusIcon className="mr-1 h-3 w-3" />
+                                                                            {statusInfo?.label}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Actions Dropdown */}
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700">
+                                                                            <MoreVertical className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
+                                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                                        <DropdownMenuSeparator className="bg-slate-700" />
+
+                                                                        {canComplete && (
+                                                                            <DropdownMenuItem
+                                                                                className="focus:bg-slate-800 text-green-400"
+                                                                                onClick={() => completeStageMutation.mutate({ stageId: stage.id })}
+                                                                            >
+                                                                                <CheckCircle className="mr-2 h-4 w-4" />
+                                                                                <span>Completar</span>
+                                                                            </DropdownMenuItem>
+                                                                        )}
+
+                                                                        {canRetry && (
+                                                                            <DropdownMenuItem
+                                                                                className="focus:bg-slate-800"
+                                                                                onClick={() => retryStageMutation.mutate({ stageId: stage.id })}
+                                                                            >
+                                                                                <RotateCcw className="mr-2 h-4 w-4" />
+                                                                                <span>Reintentar</span>
+                                                                            </DropdownMenuItem>
+                                                                        )}
+
+                                                                        {canSkip && (
+                                                                            <DropdownMenuItem
+                                                                                className="focus:bg-slate-800 text-yellow-400"
+                                                                                onClick={() => skipStageMutation.mutate({ stageId: stage.id })}
+                                                                            >
+                                                                                <SkipForward className="mr-2 h-4 w-4" />
+                                                                                <span>Omitir</span>
+                                                                            </DropdownMenuItem>
+                                                                        )}
+
+                                                                        {canCancel && (
+                                                                            <DropdownMenuItem
+                                                                                className="focus:bg-slate-800 text-orange-400"
+                                                                                onClick={() => cancelStageMutation.mutate({ stageId: stage.id })}
+                                                                            >
+                                                                                <Ban className="mr-2 h-4 w-4" />
+                                                                                <span>Cancelar</span>
+                                                                            </DropdownMenuItem>
+                                                                        )}
+
+                                                                        <DropdownMenuSeparator className="bg-slate-700" />
+
+                                                                        <DropdownMenuItem
+                                                                            className="focus:bg-slate-800"
+                                                                            onClick={() =>
+                                                                                changeStageModeMutation.mutate({
+                                                                                    stageId: stage.id,
+                                                                                    mode: isManual ? "AUTO" : "MANUAL",
+                                                                                })
+                                                                            }
+                                                                        >
+                                                                            <Settings className="mr-2 h-4 w-4" />
+                                                                            <span>Cambiar a {isManual ? "Auto" : "Manual"}</span>
+                                                                        </DropdownMenuItem>
+
+                                                                        {stage.outputFileKey && (
+                                                                            <>
+                                                                                <DropdownMenuSeparator className="bg-slate-700" />
+                                                                                <DropdownMenuItem
+                                                                                    className="focus:bg-slate-800"
+                                                                                    onClick={() => handleDownload(stage.outputFileKey)}
+                                                                                >
+                                                                                    <Download className="mr-2 h-4 w-4" />
+                                                                                    <span>Descargar Output</span>
+                                                                                </DropdownMenuItem>
+                                                                            </>
+                                                                        )}
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </div>
+
+                                                            {/* Details */}
+                                                            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                                                                {stage.startedAt && (
+                                                                    <div>
+                                                                        <p className="text-slate-500">Iniciado</p>
+                                                                        <p className="text-white">{new Date(stage.startedAt).toLocaleString("es-AR")}</p>
+                                                                    </div>
+                                                                )}
+                                                                {stage.completedAt && (
+                                                                    <div>
+                                                                        <p className="text-slate-500">Completado</p>
+                                                                        <p className="text-white">{new Date(stage.completedAt).toLocaleString("es-AR")}</p>
+                                                                    </div>
+                                                                )}
+                                                                {stage.durationSeconds && (
+                                                                    <div>
+                                                                        <p className="text-slate-500">Duración</p>
+                                                                        <p className="text-white">{Math.round(stage.durationSeconds / 60)} min</p>
+                                                                    </div>
+                                                                )}
+                                                                {stage.actualCost && (
+                                                                    <div>
+                                                                        <p className="text-slate-500">Costo</p>
+                                                                        <p className="text-white">${stage.actualCost.toFixed(4)}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Error Message */}
+                                                            {stage.errorMessage && (
+                                                                <div className="mt-4 p-3 rounded-lg bg-red-950/50 border border-red-800">
+                                                                    <p className="text-red-400 font-medium text-sm">Error:</p>
+                                                                    <p className="text-red-300 text-sm mt-1">{stage.errorMessage}</p>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Metadata */}
+                                                            {stage.metadata && Object.keys(stage.metadata).length > 0 && (
+                                                                <div className="mt-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                                                                    <p className="text-slate-400 font-medium text-sm mb-2">Metadata:</p>
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                        {Object.entries(stage.metadata).map(([key, value]) => (
+                                                                            <div key={key}>
+                                                                                <span className="text-slate-500">{key}: </span>
+                                                                                <span className="text-white">{String(value)}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </Card>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <Zap className="h-12 w-12 mx-auto mb-3 text-slate-600" />
+                                            <p className="text-slate-400">No hay etapas de pipeline aún</p>
+                                            <p className="text-sm text-slate-500 mt-2">
+                                                El pipeline se creará cuando se suba un archivo
+                                            </p>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>

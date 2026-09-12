@@ -65,7 +65,7 @@ packages/
 ├── ui/              # Shared UI components - shadcn/ui (@acme/ui)
 ├── validators/      # Shared Zod schemas (@acme/validators)
 ├── billing/         # Polar payments, plans and limits (@acme/billing)
-├── processing/      # BullMQ job processing (@acme/processing, WIP)
+├── processing/      # BullMQ pipeline: orchestrator, workers, Docker + Modal (@acme/processing)
 └── storage/         # S3-compatible storage (Cloudflare R2) (@acme/storage)
 
 tooling/

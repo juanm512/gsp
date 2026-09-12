@@ -27,19 +27,21 @@ Subís un video o un set de fotos, el equipo lo procesa y obtenés una presentac
 **Gaussian Splatting** es una técnica de reconstrucción 3D que, a partir de un video o un conjunto de fotos, genera una escena volumétrica que se puede recorrer en tiempo real en el navegador. GSP es un SaaS que envuelve ese flujo de punta a punta:
 
 - **Para el usuario:** crea una organización, sube su material (video, ZIP de imágenes o un archivo `.ply` / `.splat` / `.sog` ya generado), sigue el estado del procesamiento y visualiza el resultado.
-- **Para el equipo de operaciones:** un panel de administración separado permite revisar el material, reclamar trabajos, subir los archivos procesados y publicar la presentación final.
+- **Por detrás:** un pipeline por etapas procesa el material automáticamente (extracción de frames, validación, COLMAP, entrenamiento de Gaussian Splatting, conversión a SOG) y se pausa en los pasos que requieren revisión humana.
+- **Para el equipo de operaciones:** un panel de administración separado permite seguir cada etapa, reintentar o saltear pasos, subir archivos optimizados y aprobar la presentación final.
 
 ## Funcionalidades
 
-| Área               | Detalle                                                                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Autenticación**  | Better Auth con email + contraseña, verificación de email y recuperación de contraseña vía Resend.                                                     |
-| **Organizaciones** | Multi-tenant: cada usuario puede crear organizaciones, invitar miembros y gestionar roles. Notificaciones de invitaciones en el header.                |
-| **Presentaciones** | Ciclo de vida completo: `draft → pending_review → approved → processing → completed`. Subida directa a almacenamiento S3/R2 mediante URLs prefirmadas. |
-| **Visualizadores** | Visor de Gaussian Splats con dos motores intercambiables (**Spark** sobre Three.js y **PlayCanvas**), reproductor de video y explorador de ZIP.        |
-| **Panel admin**    | App independiente con roles `admin` / `superadmin`: gestión de usuarios (ban, cambio de rol), organizaciones y cola de presentaciones.                 |
-| **Facturación**    | Integración con Polar: checkout, portal del cliente, webhooks de suscripción y límites por plan (presentaciones, almacenamiento, miembros).            |
-| **API tipada**     | tRPC v11 de punta a punta con procedures `public`, `protected`, `admin` y `superAdmin`.                                                                |
+| Área                          | Detalle                                                                                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Autenticación**             | Better Auth con email + contraseña, verificación de email y recuperación de contraseña vía Resend.                                                                                     |
+| **Organizaciones**            | Multi-tenant: cada usuario puede crear organizaciones, invitar miembros y gestionar roles. Notificaciones de invitaciones en el header.                                                |
+| **Presentaciones**            | Ciclo de vida completo: `draft → pending_review → approved → processing → completed`. Subida directa a almacenamiento S3/R2 mediante URLs prefirmadas.                                 |
+| **Pipeline de procesamiento** | Orquestador sobre BullMQ + Redis con etapas automáticas y manuales. Workers CPU en Docker (frames, validación, SOG) y workers GPU en Modal (COLMAP, entrenamiento con Brush / gsplat). |
+| **Visualizadores**            | Visor de Gaussian Splats basado en **Spark** sobre Three.js (formatos `.ply`, `.splat`, `.sog`), reproductor de video y explorador de ZIP.                                             |
+| **Panel admin**               | App independiente con roles `admin` / `superadmin`: gestión de usuarios (ban, cambio de rol), organizaciones y cola de presentaciones.                                                 |
+| **Facturación**               | Integración con Polar: checkout, portal del cliente, webhooks de suscripción y límites por plan (presentaciones, almacenamiento, miembros).                                            |
+| **API tipada**                | tRPC v11 de punta a punta con procedures `public`, `protected`, `admin` y `superAdmin`.                                                                                                |
 
 ## Arquitectura
 
@@ -51,12 +53,12 @@ apps/
 └─ admin/      Next.js 16 · panel de administración (puerto 3001)
 
 packages/
-├─ api/        Routers tRPC: auth, organization, presentation, billing, admin
+├─ api/        Routers tRPC: auth, organization, presentation, pipeline, billing, admin
 ├─ auth/       Configuración de Better Auth (organizaciones, admin, emails)
 ├─ db/         Drizzle ORM + esquema PostgreSQL (auth, presentaciones, uploads)
 ├─ billing/    Cliente de Polar, planes, límites y manejo de webhooks
 ├─ storage/    Cliente S3 compatible (Cloudflare R2) con URLs prefirmadas
-├─ processing/ Colas BullMQ + Redis para el pipeline de procesamiento (WIP)
+├─ processing/ Pipeline BullMQ: orquestador, workers TS, Dockerfiles y funciones Modal
 ├─ ui/         Componentes shadcn/ui + visualizadores 3D, video y ZIP
 └─ validators/ Esquemas Zod compartidos
 
@@ -88,10 +90,14 @@ flowchart LR
   API --> BILL
   API --> STO
   AUTH --> DB
-  PROC -.-> STO
+  API --> PROC
+  PROC --> STO
+  PROC --> DB
   STO --> R2[(Cloudflare R2)]
   DB --> PG[(PostgreSQL)]
-  PROC --> REDIS[(Redis)]
+  PROC --> REDIS[(Redis · BullMQ)]
+  REDIS --> CPU[Workers CPU · Docker]
+  REDIS --> GPU[Workers GPU · Modal]
 ```
 
 ### Flujo de una presentación
@@ -102,19 +108,31 @@ sequenceDiagram
   participant W as web
   participant API as tRPC
   participant R2 as R2 Storage
+  participant Q as BullMQ
+  participant WK as Workers CPU/GPU
   actor Op as Admin
-  U->>W: Crea presentación
-  W->>API: presentation.create
-  U->>W: Selecciona video / ZIP / .ply
+  U->>W: Crea presentación y elige video / ZIP / .ply
   W->>API: presentation.initiateUpload
   API-->>W: URL prefirmada
-  W->>R2: PUT archivo (directo desde el navegador)
-  W->>API: presentation.confirmUpload → pending_review
-  Op->>API: adminClaim / adminUpdateStatus → processing
-  Op->>R2: Sube .sog / .splat procesado
-  Op->>API: adminSetActiveFile → completed
-  U->>W: Visualiza en el visor 3D
+  W->>R2: PUT archivo directo desde el navegador
+  W->>API: presentation.confirmUpload
+  API->>Q: Crea las etapas del pipeline según el tipo de archivo
+  Q->>WK: Frames → validación → COLMAP → entrenamiento → SOG
+  WK->>R2: Sube el resultado de cada etapa
+  WK-->>API: Etapa completada / pausa en etapa manual
+  Op->>API: Optimiza el .ply y aprueba (pipeline.*)
+  U->>W: Visualiza la presentación en el visor 3D
 ```
+
+Etapas por tipo de archivo:
+
+| Entrada           | Etapas                                                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Video             | `EXTRACT_FRAMES` → `VALIDATE_OVERLAP` → `COLMAP` → `BRUSH_TRAINING` → `OPTIMIZE_PLY` (manual) → `CONVERT_SOG` → `ADMIN_APPROVAL` (manual) |
+| ZIP de imágenes   | `VALIDATE_OVERLAP` → `COLMAP` → `BRUSH_TRAINING` → `OPTIMIZE_PLY` (manual) → `CONVERT_SOG` → `ADMIN_APPROVAL` (manual)                    |
+| `.ply` / `.splat` | `OPTIMIZE_PLY` (manual) → `CONVERT_SOG` → `ADMIN_APPROVAL` (manual)                                                                       |
+
+El detalle de despliegue de los workers está en [`packages/processing/README.md`](./packages/processing/README.md).
 
 ## Puesta en marcha
 
@@ -142,6 +160,9 @@ pnpm db:push
 
 # 5. Correr las apps
 pnpm dev:apps        # web en :3000 y admin en :3001
+
+# 6. (Opcional) Correr los workers CPU del pipeline
+pnpm -F @acme/processing start:cpu
 ```
 
 Otros comandos útiles:
@@ -176,8 +197,9 @@ pnpm ui-add          # agregar componentes de shadcn/ui
 - [x] Panel de administración con roles
 - [x] Facturación con Polar y límites por plan
 - [x] Ciclo de vida de presentaciones y uploads a R2
-- [x] Visor de Gaussian Splats con Spark y PlayCanvas
-- [ ] Pipeline automático de procesamiento (extracción de frames, COLMAP, entrenamiento) sobre BullMQ
+- [x] Visor de Gaussian Splats con Spark
+- [x] Pipeline automático de procesamiento (frames, COLMAP, entrenamiento, SOG) sobre BullMQ y Modal
+- [ ] Endurecer el pipeline: métricas, reintentos automáticos y límites de costo por organización
 - [ ] OAuth con Google
 - [ ] Páginas públicas de presentaciones compartibles
 - [ ] Tests end-to-end
@@ -185,8 +207,9 @@ pnpm ui-add          # agregar componentes de shadcn/ui
 ## Decisiones técnicas
 
 - **Uploads directos al bucket** con URLs prefirmadas: el servidor nunca recibe el archivo, lo que mantiene la API liviana ante videos de varios GB.
-- **Dos motores de render** detrás de una misma interfaz `GSViewer`: permite comparar rendimiento y compatibilidad de formatos (`.ply`, `.splat`, `.sog`) sin tocar la app.
-- **Procesamiento asistido por un operador** como primera etapa: el flujo de estados ya contempla la automatización, pero la revisión manual permite validar el material antes de invertir cómputo.
+- **Pipeline híbrido automático + manual:** cada etapa declara si es `AUTO` o `MANUAL`. Lo repetible corre solo y lo que requiere criterio (optimizar el `.ply`, aprobar) espera a un operador, sin duplicar lógica de estados.
+- **Cómputo separado por costo:** los workers CPU corren en contenedores baratos y solo COLMAP y el entrenamiento van a GPU serverless en Modal, que se paga por segundo de uso.
+- **Formato SOG para el visor:** el resultado final se convierte a SOG, un formato comprimido que reduce varias veces el peso respecto al `.ply` y hace viable la carga en el navegador.
 - **Monorepo con paquetes chicos y explícitos** para que auth, storage y billing sean reemplazables sin arrastrar el resto.
 
 ## Licencia

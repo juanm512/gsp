@@ -75,10 +75,10 @@ export const billingRouter = {
             });
 
             return {
-                plan: (org as any).plan || "free",
-                planExpiresAt: (org as any).planExpiresAt,
-                polarSubscriptionId: (org as any).polarSubscriptionId,
-                polarCustomerId: (org as any).polarCustomerId,
+                plan: org.plan || "free",
+                planExpiresAt: org.planExpiresAt,
+                polarSubscriptionId: org.polarSubscriptionId,
+                polarCustomerId: org.polarCustomerId,
                 memberCount: members.length,
             };
         }),
@@ -93,7 +93,7 @@ export const billingRouter = {
                 where: eq(organization.id, organizationId),
             });
 
-            if (!org || !(org as any).polarCustomerId) {
+            if (!org || !org.polarCustomerId) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "No billing account found" });
             }
 

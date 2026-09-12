@@ -21,6 +21,7 @@
     "@acme/auth": "workspace:*",
     "@acme/billing": "workspace:*",
     "@acme/db": "workspace:*",
+    "@acme/processing": "workspace:*",
     "@acme/storage": "workspace:*",
     "@acme/validators": "workspace:*",
     "@trpc/server": "catalog:",

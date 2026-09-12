@@ -301,6 +301,9 @@ importers:
       '@acme/db':
         specifier: workspace:*
         version: link:../db
+      '@acme/processing':
+        specifier: workspace:*
+        version: link:../processing
       '@acme/storage':
         specifier: workspace:*
         version: link:../storage
@@ -455,6 +458,9 @@ importers:
 
   packages/processing:
     dependencies:
+      '@acme/db':
+        specifier: workspace:*
+        version: link:../db
       bullmq:
         specifier: ^5.66.5
         version: 5.66.5
@@ -523,9 +529,6 @@ importers:
       '@mkkellogg/gaussian-splats-3d':
         specifier: ^0.4.7
         version: 0.4.7(three@0.182.0)
-      '@playcanvas/react':
-        specifier: ^0.11.5
-        version: 0.11.5(playcanvas@2.22.2)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.1.9(@types/react@19.1.12))(@types/react@19.1.12)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
@@ -562,9 +565,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
-      playcanvas:
-        specifier: ^2.22.2
-        version: 2.22.2
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@19.1.9(@types/react@19.1.12))(@types/react@19.1.12)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)
@@ -1456,7 +1456,6 @@ packages:
 
   '@better-auth/cli@1.4.0-beta.9':
     resolution: {integrity: sha512-N7poVoYqC+pj4oUabUQN3qz+vnHJEOArPcm00qf9qRJJEGhOa252NX34/utvtfsnvvyXWE7n2U6WQz1lf6JH1w==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
     hasBin: true
 
   '@better-auth/core@1.4.0-beta.9':
@@ -1524,11 +1523,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.hirok.io'
+    deprecated: 'Merged into tsx: https://tsx.is'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.hirok.io'
+    deprecated: 'Merged into tsx: https://tsx.is'
 
   '@esbuild/aix-ppc64@0.25.11':
     resolution: {integrity: sha512-Xt1dOL13m8u0WE8iplx9Ibbm+hFAO0GsU2P34UNoDGvZYkY8ifSiy6Zuc1lYxfG7svWE2fzqCUmFp5HCn51gJg==}
@@ -2549,18 +2548,6 @@ packages:
   '@planetscale/database@1.19.0':
     resolution: {integrity: sha512-Tv4jcFUFAFjOWrGSio49H6R2ijALv0ZzVBfJKIdm+kl9X046Fh4LLawrF9OMsglVbK6ukqMJsUCeucGAFTBcMA==}
     engines: {node: '>=16'}
-
-  '@playcanvas/react@0.11.5':
-    resolution: {integrity: sha512-GlEyEJf9qCsQ9NoL8vXTFg7a6tsB99udia/AHgJmie1vl+dECPg8Itv8UU4iuiFWhqmF4binP/XPkCCARm6sGQ==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      playcanvas: ^2.11.8
-      react: ^18.3.1 || ^19.1.0
-      react-dom: ^18.3.1 || ^19.1.0
-      sync-ammo: ^0.1.2
-    peerDependenciesMeta:
-      sync-ammo:
-        optional: true
 
   '@polar-sh/sdk@0.42.2':
     resolution: {integrity: sha512-dmm/ySQZQfFbeO8x/1sgcFdkgYOXAc/Sgu0nHj4hhHxrEVbI2axvm4jV/SCpCbm0MvoY+bsbHFP8n8MUaQaCgQ==}
@@ -4349,7 +4336,6 @@ packages:
   '@vercel/postgres@0.10.0':
     resolution: {integrity: sha512-fSD23DxGND40IzSkXjcFcxr53t3Tiym59Is0jSYIFpG4/0f0KO9SGtcp1sXiebvPaGe7N/tU05cH4yt2S6/IPg==}
     engines: {node: '>=18.14'}
-    deprecated: '@vercel/postgres is deprecated. If you are setting up a new database, you can choose an alternate storage solution from the Vercel Marketplace. If you had an existing Vercel Postgres database, it should have been migrated to Neon as a native Vercel integration. You can find more details and the guide to migrate to Neon''s SDKs here: https://neon.com/docs/guides/vercel-postgres-transition-guide'
 
   '@vue/compiler-core@3.5.16':
     resolution: {integrity: sha512-AOQS2eaQOaaZQoL1u+2rCJIKDruNXVBZSiUD3chnUrsoX5ZTQMaCvXlWNIfxBJuU15r1o7+mpo5223KVtIhAgQ==}
@@ -4368,9 +4354,6 @@ packages:
 
   '@webgpu/types@0.1.69':
     resolution: {integrity: sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ==}
-
-  '@webgpu/types@0.1.72':
-    resolution: {integrity: sha512-0cF7RFM2edNoiIS1ODJp0/Gzv4/xSXhwoR0YCza+OWpJWtn4wmo9DvK91aLlH9+uUnwIriP7ZiC3WitmyhuzBw==}
 
   '@xmldom/xmldom@0.8.10':
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
@@ -4639,7 +4622,6 @@ packages:
   basic-ftp@5.0.5:
     resolution: {integrity: sha512-4Bcg1P8xhUuqcii/S0Z9wiHIrQVPMermM1any+MX5GeGD7faD3/msQUDGLol9wOcz4/jbg/WJnGqoJF6LiBdtg==}
     engines: {node: '>=10.0.0'}
-    deprecated: Security vulnerability fixed in 5.2.1, please upgrade
 
   better-auth@1.4.0-beta.9:
     resolution: {integrity: sha512-JmVvaC/VCtFtI/sUGkoaLnzV/nnMn13XR6Vrkf4zGxah6g38S0GPvD7iZlBHehTN6Fb5aUwWPKgqFowxyOm2xw==}
@@ -5000,7 +4982,6 @@ packages:
   cron-parser@4.9.0:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
-    deprecated: v4 is no longer maintained, upgrade to v5
 
   cross-env@7.0.3:
     resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
@@ -5087,14 +5068,6 @@ packages:
   decompress-response@6.0.0:
     resolution: {integrity: sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==}
     engines: {node: '>=10'}
-
-  dedent@1.7.2:
-    resolution: {integrity: sha512-WzMx3mW98SN+zn3hgemf4OzdmyNhhhKz5Ay0pUfQiMQ3e1g+xmTJWp/pKdwKVXhdSkAEGIIzqeuWrL3mV/AXbA==}
-    peerDependencies:
-      babel-plugin-macros: ^3.1.0
-    peerDependenciesMeta:
-      babel-plugin-macros:
-        optional: true
 
   deep-extend@0.6.0:
     resolution: {integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==}
@@ -5626,7 +5599,6 @@ packages:
   eslint@9.38.0:
     resolution: {integrity: sha512-t5aPOpmtJcZcz5UJyY2GbvpDlsK5E8JqRqoKtfiKE3cNh437KIqfJr3A3AKf5k64NPx6d0G3dno6XDY05PqPtw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -6014,7 +5986,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+    deprecated: Glob versions prior to v9 are no longer supported
 
   global-dirs@0.1.1:
     resolution: {integrity: sha512-NknMLn7F2J7aflwFOlGdNIuCDpN3VGoSoB+aap3KABFWbHVn1TCgFC+np23J8W2BiZbjfEw3BFBycSMv1AFblg==}
@@ -7377,10 +7349,6 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
-  playcanvas@2.22.2:
-    resolution: {integrity: sha512-ePc1zbdrXikBdyOZrxpwSdWSZEUbV0NLdZkA4XDVZJfYqrr7PqWXQ9bY69UpG2dsNVM8d8gTKUJmCx7PO4ITRQ==}
-    engines: {node: '>=18.3.0'}
-
   plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
     engines: {node: '>=10.4.0'}
@@ -7453,7 +7421,6 @@ packages:
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
-    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
     hasBin: true
 
   prelude-ls@1.2.1:
@@ -11436,15 +11403,6 @@ snapshots:
   '@planetscale/database@1.19.0':
     optional: true
 
-  '@playcanvas/react@0.11.5(playcanvas@2.22.2)(react-dom@19.1.4(react@19.1.4))(react@19.1.4)':
-    dependencies:
-      dedent: 1.7.2
-      playcanvas: 2.22.2
-      react: 19.1.4
-      react-dom: 19.1.4(react@19.1.4)
-    transitivePeerDependencies:
-      - babel-plugin-macros
-
   '@polar-sh/sdk@0.42.2':
     dependencies:
       standardwebhooks: 1.0.0
@@ -13737,8 +13695,6 @@ snapshots:
 
   '@webgpu/types@0.1.69': {}
 
-  '@webgpu/types@0.1.72': {}
-
   '@xmldom/xmldom@0.8.10':
     optional: true
 
@@ -14644,8 +14600,6 @@ snapshots:
   decompress-response@6.0.0:
     dependencies:
       mimic-response: 3.1.0
-
-  dedent@1.7.2: {}
 
   deep-extend@0.6.0: {}
 
@@ -17492,11 +17446,6 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.7
       pathe: 2.0.3
-
-  playcanvas@2.22.2:
-    dependencies:
-      '@types/webxr': 0.5.24
-      '@webgpu/types': 0.1.72
 
   plist@3.1.0:
     dependencies:

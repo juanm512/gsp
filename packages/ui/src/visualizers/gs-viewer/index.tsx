@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card } from "../../card";
 import { Loader2 } from "lucide-react";
 import { SparkViewer } from "./spark-viewer";
-import { PlayCanvasViewer } from "./playcanvas-viewer";
 import { cn } from "../../index";
 
 export type GSEngine = "spark" | "playcanvas";
@@ -82,9 +81,6 @@ export function GSViewer({ url, className, initialEngine = "spark" }: GSViewerPr
                             <SparkViewer url={url} onLoad={handleLoad} />
                         </React.Suspense>
                     </Canvas>
-                )}
-                {engine === "playcanvas" && (
-                    <PlayCanvasViewer url={url} onLoad={handleLoad} />
                 )}
             </div>
         </div>

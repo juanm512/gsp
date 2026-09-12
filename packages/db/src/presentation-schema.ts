@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, json } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, json, bigint, real, index, jsonb, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user, organization } from "./auth-schema";
 
@@ -14,6 +14,32 @@ export const presentationStatusEnum = pgEnum("presentation_status", [
     "processing",      // En proceso por admin
     "completed",       // Finalizado y listo para visualizar
     "failed",          // Error en procesamiento
+]);
+
+// Processing pipeline enums
+export const stageTypeEnum = pgEnum("stage_type", [
+    "EXTRACT_FRAMES",
+    "VALIDATE_OVERLAP",
+    "COLMAP",
+    "BRUSH_TRAINING",
+    "OPTIMIZE_PLY",
+    "CONVERT_SOG",
+    "VALIDATE_SOG",
+    "ADMIN_APPROVAL",
+]);
+
+export const stageStatusEnum = pgEnum("stage_status", [
+    "PENDING",
+    "IN_PROGRESS",
+    "COMPLETED",
+    "FAILED",
+    "SKIPPED",
+    "CANCELLED",
+]);
+
+export const processingModeEnum = pgEnum("processing_mode", [
+    "AUTO",    // Automatizado en worker
+    "MANUAL",  // Requiere acción de admin
 ]);
 
 export const uploadTypeEnum = pgEnum("upload_type", [
@@ -58,6 +84,17 @@ export const presentation = pgTable("presentation", {
     status: presentationStatusEnum("status").default("draft").notNull(),
     activeFileKey: text("active_file_key"), // Key del archivo usado para visualización
     thumbnailKey: text("thumbnail_key"),    // Miniatura para previews
+
+    // Upload information for pipeline
+    uploadFileKey: text("upload_file_key"), // Original uploaded file
+    uploadFileSize: bigint("upload_file_size", { mode: "number" }), // Size in bytes
+
+    // Pipeline state
+    currentStage: stageTypeEnum("current_stage"), // Current stage in the pipeline
+
+    // Public access
+    isPublic: boolean("is_public").default(false).notNull(),
+    publicUrl: text("public_url"), // URL for public viewing
 
     // Rejection/failure info
     rejectionReason: text("rejection_reason"),
@@ -113,6 +150,61 @@ export const processedFile = pgTable("processed_file", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const processingStage = pgTable("processing_stage", {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    presentationId: text("presentation_id")
+        .notNull()
+        .references(() => presentation.id, { onDelete: "cascade" }),
+
+    // Stage type and configuration
+    stage: stageTypeEnum("stage").notNull(),
+    status: stageStatusEnum("status").default("PENDING").notNull(),
+    mode: processingModeEnum("mode").notNull(),
+    order: integer("order").notNull(), // Order in the pipeline
+
+    // Execution details
+    processingType: text("processing_type"), // "CPU" | "GPU"
+    provider: text("provider"), // "modal", "local", etc.
+    instanceType: text("instance_type"), // "T4", "A10G", etc.
+
+    // Timestamps
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at"),
+    durationSeconds: integer("duration_seconds"),
+
+    // Files
+    inputFileKey: text("input_file_key"),
+    outputFileKey: text("output_file_key"),
+    outputFileSize: bigint("output_file_size", { mode: "number" }),
+
+    // Costs
+    estimatedCost: real("estimated_cost"),
+    actualCost: real("actual_cost"),
+
+    // Errors and logs
+    errorMessage: text("error_message"),
+    errorStack: text("error_stack"),
+    logs: text("logs"),
+
+    // Metadata (flexible JSON for stage-specific data)
+    metadata: jsonb("metadata").$type<{
+        frameCount?: number;
+        overlapScore?: number;
+        validImages?: number;
+        colmapPoints?: number;
+        plyVertices?: number;
+        compressionRatio?: number;
+        [key: string]: unknown;
+    }>(),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+    index("processing_stage_presentation_idx").on(table.presentationId),
+    index("processing_stage_status_idx").on(table.status),
+    index("processing_stage_order_idx").on(table.presentationId, table.order),
+]);
+
 // ============================================
 // RELATIONS
 // ============================================
@@ -134,6 +226,7 @@ export const presentationRelations = relations(presentation, ({ one, many }) => 
     }),
     uploads: many(upload),
     processedFiles: many(processedFile),
+    processingStages: many(processingStage),
 }));
 
 export const uploadRelations = relations(upload, ({ one }) => ({
@@ -151,5 +244,12 @@ export const processedFileRelations = relations(processedFile, ({ one }) => ({
     uploadedBy: one(user, {
         fields: [processedFile.uploadedById],
         references: [user.id],
+    }),
+}));
+
+export const processingStageRelations = relations(processingStage, ({ one }) => ({
+    presentation: one(presentation, {
+        fields: [processingStage.presentationId],
+        references: [presentation.id],
     }),
 }));

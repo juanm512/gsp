@@ -3,6 +3,7 @@ import { authRouter } from "./router/auth";
 import { billingRouter } from "./router/billing";
 import { organizationRouter } from "./router/organization";
 import { presentationRouter } from "./router/presentation";
+import { pipelineRouter } from "./router/pipeline";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   organization: organizationRouter,
   billing: billingRouter,
   presentation: presentationRouter,
+  pipeline: pipelineRouter,
 });
 
 // export type definition of API
