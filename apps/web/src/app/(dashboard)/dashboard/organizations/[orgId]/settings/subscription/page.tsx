@@ -23,6 +23,7 @@ import {
 
 const plansConfig = {
     free: {
+        popular: false,
         id: "free",
         name: "Gratuito",
         price: "$0",
@@ -56,6 +57,7 @@ const plansConfig = {
         popular: true,
     },
     enterprise: {
+        popular: false,
         id: "enterprise",
         name: "Empresa",
         price: "Contactar",

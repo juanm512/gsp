@@ -15,8 +15,10 @@ pnpm i
 # Development (all apps)
 pnpm dev
 
-# Development (Next.js only with dependencies)
-pnpm dev:next
+# Development (web + admin only)
+pnpm dev:apps
+pnpm dev:web
+pnpm dev:admin
 
 # Build all packages
 pnpm build
@@ -45,9 +47,6 @@ pnpm ui-add
 # Create new package
 pnpm turbo gen init
 
-# Mobile development
-pnpm android
-pnpm ios
 ```
 
 ## Architecture
@@ -56,18 +55,18 @@ pnpm ios
 
 ```
 apps/
-├── nextjs/          # Main web application (Next.js 16, React 19)
-├── expo/            # Mobile app (Expo SDK 54, React Native)
-└── tanstack-start/  # Alternative web app (Tanstack Start)
+├── web/             # Main web application (Next.js 16, React 19, port 3000)
+└── admin/           # Admin panel (Next.js 16, roles admin/superadmin, port 3001)
 
 packages/
 ├── api/             # tRPC router definitions (@acme/api)
 ├── auth/            # Better Auth configuration (@acme/auth)
-├── db/              # Drizzle ORM schema + Supabase client (@acme/db)
+├── db/              # Drizzle ORM schema + pg client (@acme/db)
 ├── ui/              # Shared UI components - shadcn/ui (@acme/ui)
 ├── validators/      # Shared Zod schemas (@acme/validators)
-├── processing/      # BullMQ job processing (@acme/processing)
-└── storage/         # AWS S3 storage utilities (@acme/storage)
+├── billing/         # Polar payments, plans and limits (@acme/billing)
+├── processing/      # BullMQ job processing (@acme/processing, WIP)
+└── storage/         # S3-compatible storage (Cloudflare R2) (@acme/storage)
 
 tooling/
 ├── eslint/          # Shared ESLint config
@@ -79,7 +78,7 @@ tooling/
 ### Package Dependencies Flow
 
 ```
-apps/* → @acme/api → @acme/db, @acme/auth, @acme/validators
+apps/* → @acme/api → @acme/db, @acme/auth, @acme/billing, @acme/storage, @acme/validators
 apps/* → @acme/ui (for shared components)
 @acme/auth → @acme/db (for auth schema)
 ```
@@ -87,24 +86,28 @@ apps/* → @acme/ui (for shared components)
 ### Key Patterns
 
 **tRPC API (`packages/api`):**
+
 - Router definitions in `src/router/`
 - `publicProcedure` for unauthenticated endpoints
 - `protectedProcedure` for authenticated endpoints (requires session)
+- `adminProcedure` / `superAdminProcedure` for role-gated endpoints
 - Context includes `db`, `session`, and `authApi`
 
 **Database (`packages/db`):**
-- Drizzle ORM with PostgreSQL (Supabase)
-- Schema in `src/schema.ts`
-- Auth tables in `src/auth-schema.ts` (auto-generated)
+
+- Drizzle ORM with PostgreSQL
+- `src/schema.ts` re-exports `auth-schema.ts` (auto-generated) and `presentation-schema.ts`
 - Use `@acme/db/schema` for schema imports, `@acme/db/client` for db client
 
 **Authentication (`packages/auth`):**
-- Better Auth with Discord OAuth
+
+- Better Auth with email/password, email verification (Resend), organization and admin plugins
 - Auth schema generated via `pnpm auth:generate`
 - CLI config at `script/auth-cli.ts` (not for runtime use)
 - Runtime config at `src/index.ts`
 
 **UI Components (`packages/ui`):**
+
 - shadcn/ui components
 - Import individual components: `@acme/ui/button`, `@acme/ui/input`, etc.
 - Add new components with `pnpm ui-add`
@@ -112,15 +115,17 @@ apps/* → @acme/ui (for shared components)
 ## Environment Variables
 
 Required in `.env` (see `.env.example`):
-- `POSTGRES_URL` - Supabase PostgreSQL connection string
+
+- `POSTGRES_URL` - PostgreSQL connection string (`docker compose up -d` provides a local one)
+- `REDIS_URL` - Redis for BullMQ
 - `AUTH_SECRET` - Better Auth secret (generate with `openssl rand -base64 32`)
-- `AUTH_DISCORD_ID` - Discord OAuth client ID
-- `AUTH_DISCORD_SECRET` - Discord OAuth client secret
+- `RESEND_API_KEY` - transactional email
+- `POLAR_*`, `STORAGE_*` - billing and object storage
 
 ## Important Notes
 
 - Package namespace is `@acme/*` - replace with your org name if needed
-- Database is edge-bound using Vercel Postgres driver
+- Database uses the `pg` (node-postgres) driver
 - All apps use `with-env` script to load root `.env` file
-- Expo app requires `api` as dev dependency only (for types)
+- UI copy is in Spanish; code, commits and docs are in English (README is Spanish)
 - Zod v4 is used throughout (`zod/v4` import path)

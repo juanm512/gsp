@@ -152,7 +152,7 @@ export function UserTable() {
                             </div>
                         ) : (
                             users.map((user) => {
-                                const role = roleConfig[user.role] || roleConfig.user;
+                                const role = roleConfig[user.role] ?? roleConfig.user!;
                                 const RoleIcon = role.icon;
                                 const isBanned = !!user.banned;
 

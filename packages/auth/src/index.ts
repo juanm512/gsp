@@ -1,5 +1,4 @@
 import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
-import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, organization, oAuthProxy } from "better-auth/plugins";
@@ -83,7 +82,6 @@ export function initAuth<TExtraPlugins extends BetterAuthPlugin[] = []>(options:
       oAuthProxy({
         productionURL: options.productionUrl,
       }),
-      expo(),
 
       // Organization plugin - for user role (clients)
       organization({
@@ -148,7 +146,6 @@ export function initAuth<TExtraPlugins extends BetterAuthPlugin[] = []>(options:
     //   } : undefined,
     // },
 
-    trustedOrigins: ["expo://"],
 
     onAPIError: {
       onError(error, ctx) {

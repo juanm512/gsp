@@ -14,7 +14,7 @@ type RouterInputs = inferRouterInputs<AppRouter>;
  * Inference helpers for output types
  * @example
  * type AllPostsOutput = RouterOutputs['post']['all']
- *      ^? Post[]
+ *      ^? Presentation[]
  */
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 
