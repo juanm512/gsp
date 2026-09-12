@@ -17,12 +17,6 @@ next-env.d.ts
 .nitro/
 .output/
 
-# expo
-.expo/
-expo-env.d.ts
-apps/expo/.gitignore
-apps/expo/ios
-apps/expo/android
 
 # production
 build
@@ -51,7 +45,6 @@ dist/
 # turbo
 .turbo
 
-# tanstack
-.tanstack
-packages/processing/modal/__pycache__/brush_processor.cpython-314.pyc
-packages/processing/modal/__pycache__/colmap_processor.cpython-314.pyc
+# python
+__pycache__/
+*.pyc
